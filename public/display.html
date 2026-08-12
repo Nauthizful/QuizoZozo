@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz en Direct - Grand Écran</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .display-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-glass);
+      margin-bottom: 2rem;
+    }
+    .players-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+    .player-tag {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border-glass-strong);
+      padding: 0.6rem 1.4rem;
+      border-radius: var(--radius-full);
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .qr-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #FFFFFF;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .qr-card canvas, .qr-card img {
+      width: 220px !important;
+      height: 220px !important;
+    }
+    .question-image-box {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      margin: 1rem 0 1.5rem;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border-glass);
+    }
+    .leaderboard-list {
+      max-width: 700px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-glass);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .leaderboard-rank {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      background: rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="display-wrapper">
+    <!-- Header -->
+    <header class="display-header">
+      <div class="flex-row items-center gap-4">
+        <div class="brand-logo" style="font-size: 2rem;">⚡ QUIZ ARENA</div>
+        <span id="display-quiz-title" class="badge badge-info" style="font-size: 1.1rem; padding: 0.5rem 1rem;">Grand Quiz</span>
+      </div>
+
+      <div class="flex-row items-center gap-6">
+        <div class="flex-row items-center gap-2">
+          <span style="font-size: 1.5rem;">👥</span>
+          <span id="display-connected-count" style="font-size: 1.6rem; font-weight: 800; color: #FFF;">0</span>
+          <span style="color: var(--text-secondary); font-size: 1.1rem;">joueurs</span>
+        </div>
+        <div id="display-answered-badge" class="badge badge-warning hidden" style="font-size: 1.1rem; padding: 0.5rem 1rem;">
+          <span id="display-answered-count">0</span> / <span id="display-total-count">0</span> ont répondu
+        </div>
+      </div>
+    </header>
+
+    <!-- VIEWS CONTAINER -->
+    <main class="flex-1 flex-col justify-center">
+
+      <!-- 1. LOBBY VIEW -->
+      <section id="display-view-lobby" class="glass-card animate-fade-in text-center" style="padding: 3rem;">
+        <h1 id="lobby-title-text" style="font-size: 3rem; margin-bottom: 2rem; background: linear-gradient(135deg, #A78BFA, #38BDF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          Rejoignez la partie en direct !
+        </h1>
+
+        <div style="display: flex; justify-content: center; align-items: center; gap: 4rem; flex-wrap: wrap; margin-bottom: 2.5rem;">
+          <!-- QR CODE BOX -->
+          <div class="qr-card">
+            <div id="qrcode-container"></div>
+            <div style="color: #0F172A; font-weight: 800; font-size: 1.1rem; margin-top: 0.75rem;">SCANNEZ POUR JOUER</div>
+            <div id="join-url-text" style="color: #475569; font-size: 0.9rem; font-weight: 600; margin-top: 0.25rem;">http://...</div>
+          </div>
+
+          <!-- Instructions & Status -->
+          <div class="text-left" style="max-width: 500px;">
+            <div class="badge badge-success mb-4" style="font-size: 1.1rem;">Étape 1</div>
+            <h2 style="font-size: 1.8rem; margin-bottom: 1rem;">Scannez le QR Code avec votre smartphone</h2>
+            <p style="color: var(--text-secondary); font-size: 1.2rem; margin-bottom: 1.5rem;">
+              Entrez simplement votre prénom. Aucun téléchargement ni code PIN nécessaire !
+            </p>
+            <div class="badge badge-warning" style="font-size: 1.1rem;">Lancement imminent par l'animateur</div>
+          </div>
+        </div>
+
+        <!-- Real-time Connected Players Grid -->
+        <div style="border-top: 1px solid var(--border-glass); padding-top: 2rem;">
+          <h3 style="font-size: 1.4rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+            Joueurs prêts dans l'arène (<span id="lobby-players-count">0</span>)
+          </h3>
+          <div id="lobby-players-grid" class="players-grid">
+            <span style="color: var(--text-muted); font-size: 1.1rem;">En attente des premiers joueurs...</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. QUESTION & REVEAL VIEW -->
+      <section id="display-view-question" class="glass-card animate-fade-in hidden" style="padding: 2.5rem;">
+        <!-- Top Question Bar & Timer -->
+        <div class="flex-row justify-between items-center mb-4">
+          <div class="flex-row items-center gap-3">
+            <span id="display-question-number" class="badge badge-warning" style="font-size: 1.3rem; padding: 0.6rem 1.2rem;">
+              Question 1 / 5
+            </span>
+            <span id="display-multiple-badge" class="badge badge-info hidden" style="font-size: 1.1rem; padding: 0.5rem 1rem;">
+              Plusieurs réponses possibles
+            </span>
+          </div>
+
+          <!-- Circular Animated Timer -->
+          <div class="timer-container" id="display-timer-wrapper">
+            <svg class="timer-svg" viewBox="0 0 100 100">
+              <circle class="timer-circle-bg" cx="50" cy="50" r="40"></circle>
+              <circle id="display-timer-circle" class="timer-circle-progress" cx="50" cy="50" r="40"></circle>
+            </svg>
+            <div id="display-timer-text" class="timer-text">20</div>
+          </div>
+        </div>
+
+        <!-- Question Prompt -->
+        <h2 id="display-question-prompt" class="text-center" style="font-size: 2.1rem; min-height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+          Énoncé de la question
+        </h2>
+
+        <!-- Optional Question Image -->
+        <div id="display-image-container" class="text-center hidden">
+          <img id="display-question-image" class="question-image-box" src="" alt="Illustration Question">
+        </div>
+
+        <!-- Dynamic Choices Grid (3 to 6 choices) -->
+        <div class="answers-grid" id="display-choices-grid"></div>
+
+        <!-- Revelation Histogram Section (Hidden during active question) -->
+        <div id="display-histogram-section" class="hidden animate-slide-up" style="margin-top: 2rem;">
+          <h3 class="text-center" style="font-size: 1.4rem; color: var(--text-secondary); margin-bottom: 1rem;">
+            📊 Répartition des réponses des invités
+          </h3>
+          <div class="histogram-container" id="display-histogram-bars"></div>
+        </div>
+      </section>
+
+      <!-- 3. LEADERBOARD / PODIUM VIEW -->
+      <section id="display-view-leaderboard" class="glass-card animate-fade-in hidden text-center" style="padding: 2.5rem;">
+        <h1 id="leaderboard-title" style="font-size: 2.8rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, #F59E0B, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          🏆 Classement du Top 5
+        </h1>
+
+        <!-- Podium for Top 3 -->
+        <div id="podium-section" class="podium-container">
+          <!-- 2nd place -->
+          <div class="podium-step podium-2nd">
+            <div class="podium-avatar">🥈</div>
+            <div class="podium-name" id="podium-name-2">--</div>
+            <div class="podium-score" id="podium-score-2">0 pts</div>
+            <div class="podium-pillar">2</div>
+          </div>
+          <!-- 1st place -->
+          <div class="podium-step podium-1st">
+            <div class="podium-avatar">👑</div>
+            <div class="podium-name" id="podium-name-1">--</div>
+            <div class="podium-score" id="podium-score-1">0 pts</div>
+            <div class="podium-pillar">1</div>
+          </div>
+          <!-- 3rd place -->
+          <div class="podium-step podium-3rd">
+            <div class="podium-avatar">🥉</div>
+            <div class="podium-name" id="podium-name-3">--</div>
+            <div class="podium-score" id="podium-score-3">0 pts</div>
+            <div class="podium-pillar">3</div>
+          </div>
+        </div>
+
+        <!-- 4th and 5th items list -->
+        <div class="leaderboard-list" id="leaderboard-extra-list"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/confetti.js"></script>
+  <script src="/js/display.js"></script>
+</body>
+</html>

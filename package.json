@@ -1,0 +1,23 @@
+{
+  "name": "quizozozo",
+  "version": "1.0.0",
+  "description": "QuizoZozo - Application web de quiz en temps réel (Kahoot-style sans PIN) basée sur Node.js, Express, Socket.io et Vanilla JS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["quiz", "realtime", "socketio", "kahoot", "express", "multiplayer", "quizozozo"],
+  "author": "nauthizful",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "qrcode": "^1.5.3",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

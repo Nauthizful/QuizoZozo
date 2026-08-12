@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Régie Animateur - Quiz en Direct</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .gauge-bar-container {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-full);
+      height: 18px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+      border: 1px solid var(--border-glass);
+    }
+    .gauge-bar-fill {
+      background: linear-gradient(90deg, #38BDF8, #8B5CF6);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .host-note-card {
+      background: rgba(245, 158, 11, 0.12);
+      border-left: 4px solid #F59E0B;
+      padding: 1rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      margin-top: 1rem;
+    }
+    .hint-card {
+      background: rgba(6, 182, 212, 0.12);
+      border-left: 4px solid #06B6D4;
+      padding: 1rem;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      margin-top: 0.75rem;
+    }
+    .correct-choice-box {
+      background: rgba(16, 185, 129, 0.2);
+      border: 2px solid #10B981;
+      padding: 1rem;
+      border-radius: var(--radius-md);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #34D399;
+      margin-top: 1rem;
+    }
+    .control-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-glass);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="flex-row items-center gap-4">
+        <div class="brand-logo">🎙️ RÉGIE ANIMATEUR</div>
+        <span id="admin-status-badge" class="badge badge-info">LOBBY</span>
+      </div>
+
+      <div class="flex-row items-center gap-3">
+        <a href="/admin/builder" class="btn btn-secondary btn-sm">✏️ Créateur de Quiz</a>
+        <a href="/display" target="_blank" class="btn btn-secondary btn-sm">🖥️ Grand Écran ↗</a>
+      </div>
+    </header>
+
+    <!-- LIVE METRICS BAR -->
+    <section class="glass-card mb-4">
+      <div class="flex-row justify-between items-center">
+        <div class="flex-row items-center gap-4">
+          <div>
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">INVITÉS CONNECTÉS</span>
+            <div id="admin-connected-count" style="font-size: 1.8rem; font-weight: 800; color: #FFF;">0</div>
+          </div>
+          <div style="border-left: 1px solid var(--border-glass); padding-left: 1rem;">
+            <span style="font-size: 0.85rem; color: var(--text-secondary);">RÉPONSES REÇUES</span>
+            <div id="admin-answered-text" style="font-size: 1.8rem; font-weight: 800; color: #38BDF8;">0 / 0</div>
+          </div>
+        </div>
+
+        <div class="text-right">
+          <span style="font-size: 0.85rem; color: var(--text-secondary);">CHRONOMÈTRE</span>
+          <div id="admin-timer-text" style="font-size: 1.8rem; font-weight: 800; color: #F59E0B;">20s</div>
+        </div>
+      </div>
+
+      <!-- Live Answer Progress Gauge -->
+      <div class="gauge-bar-container">
+        <div id="admin-gauge-fill" class="gauge-bar-fill"></div>
+      </div>
+    </section>
+
+    <!-- MAIN CONTROL CENTER -->
+    <div class="admin-grid">
+
+      <!-- LEFT: CURRENT QUESTION & CONTROLS -->
+      <div class="flex-col gap-4">
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <div class="flex-row items-center gap-2">
+              <span id="admin-question-index" class="badge badge-warning">Question en cours</span>
+              <span id="admin-multiple-indicator" class="badge badge-info hidden">Plusieurs choix</span>
+            </div>
+            <span id="admin-quiz-title" style="color: var(--text-secondary); font-weight: 600;">Grand Quiz</span>
+          </div>
+
+          <div id="admin-question-empty" class="text-center" style="padding: 2rem 0;">
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">La partie est actuellement dans le Lobby.</p>
+            <p style="color: var(--text-secondary);">Préparez les joueurs puis cliquez sur <strong>"Lancer la partie"</strong>.</p>
+          </div>
+
+          <div id="admin-question-active" class="hidden">
+            <h2 id="admin-question-prompt" style="font-size: 1.45rem; margin-bottom: 1rem;">Énoncé de la question</h2>
+
+            <!-- Choices list overview (3 to 6) -->
+            <div class="flex-col gap-2" id="admin-choices-list"></div>
+
+            <!-- Highlighted Correct Choices -->
+            <div class="correct-choice-box">
+              ✅ BONNE(S) RÉPONSE(S) : <span id="admin-correct-choice-text">Option B</span>
+            </div>
+
+            <!-- Host Note / Joke -->
+            <div id="admin-host-note-box" class="host-note-card hidden">
+              <div style="font-weight: 800; color: #F59E0B; margin-bottom: 0.25rem;">💡 NOTE D'ANIMATION / BLAGUE :</div>
+              <p id="admin-host-note-text" style="color: var(--text-primary); font-size: 0.95rem;"></p>
+            </div>
+
+            <!-- Hint -->
+            <div id="admin-hint-box" class="hint-card hidden">
+              <div style="font-weight: 800; color: #06B6D4; margin-bottom: 0.25rem;">🔍 INDICE :</div>
+              <p id="admin-hint-text" style="color: var(--text-primary); font-size: 0.95rem;"></p>
+            </div>
+          </div>
+
+          <!-- PRIMARY ACTION TOOLBAR -->
+          <div class="control-toolbar">
+            <button id="btn-start-game" class="btn btn-primary">🚀 Lancer la partie</button>
+            <button id="btn-reveal-answer" class="btn btn-warning hidden">👁️ Afficher la réponse</button>
+            <button id="btn-show-leaderboard" class="btn btn-success hidden">🏆 Afficher le classement</button>
+            <button id="btn-next-question" class="btn btn-primary hidden">➡️ Question suivante</button>
+          </div>
+
+          <!-- TIME CONTROLS -->
+          <div class="flex-row items-center gap-2 mt-4" style="padding-top: 1rem; border-top: 1px solid var(--border-glass);">
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-right: 0.5rem;">GESTION DU TEMPS :</span>
+            <button id="btn-toggle-pause" class="btn btn-secondary btn-sm">⏸️ Pause</button>
+            <button id="btn-add-time" class="btn btn-secondary btn-sm">⏳ +10s</button>
+            <button id="btn-force-end" class="btn btn-secondary btn-sm">⚡ Forcer la fin</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: NEXT QUESTION (N+1) & DANGER ZONE -->
+      <div class="flex-col gap-4">
+        
+        <!-- Next Question (N+1) Card -->
+        <div class="glass-card">
+          <div class="glass-card-header">
+            <span class="badge badge-info">Aperçu Question Suivante (N+1)</span>
+          </div>
+          <div id="admin-next-q-content">
+            <p id="admin-next-q-prompt" style="font-weight: 600; font-size: 1.05rem; margin-bottom: 0.75rem; color: var(--text-primary);">
+              Aucune question suivante
+            </p>
+            <div id="admin-next-q-answer" style="font-size: 0.9rem; color: var(--text-secondary);">
+              Réponse : --
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone: Reset / Wipe Quiz -->
+        <div class="glass-card" style="border-color: rgba(239, 68, 68, 0.3);">
+          <div class="glass-card-header">
+            <span class="badge badge-warning" style="background: rgba(239, 68, 68, 0.2); color: #F87171; border-color: rgba(239, 68, 68, 0.3);">Zone Critique</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+            Réinitialise complètement l'état de la partie et supprime tous les médias téléversés sur le serveur.
+          </p>
+          <button id="btn-open-delete-modal" class="btn btn-danger" style="width: 100%;">
+            🗑️ SUPPRIMER LE QUIZZ
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONFIRMATION MODAL FOR RESET -->
+  <div id="modal-delete-confirm" class="modal-backdrop">
+    <div class="modal-dialog text-center">
+      <div style="font-size: 3.5rem; margin-bottom: 1rem;">⚠️</div>
+      <h2 style="color: #EF4444; font-size: 1.6rem; margin-bottom: 0.75rem;">Confirmation de suppression</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+        Cette action va <strong>effacer tout l'état de la partie en mémoire</strong> et <strong>supprimer physiquement tous les fichiers images du dossier /uploads/</strong>.
+        <br><br>
+        Êtes-vous certain de vouloir continuer ?
+      </p>
+      <div class="flex-row justify-center gap-4">
+        <button id="btn-cancel-delete" class="btn btn-secondary">Annuler</button>
+        <button id="btn-confirm-delete" class="btn btn-danger">Oui, tout supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "title": "Grand Quiz Culture & Sciences (3 à 6 Choix)",
+  "version": "2.0",
+  "questions": [
+    {
+      "id": "q-sample-1",
+      "prompt": "Quelle planète est la plus proche du Soleil ?",
+      "image": null,
+      "choices": [
+        { "id": "A", "text": "Vénus" },
+        { "id": "B", "text": "Mercure" },
+        { "id": "C", "text": "Mars" },
+        { "id": "D", "text": "Jupiter" }
+      ],
+      "correctChoices": ["B"],
+      "timer": 20,
+      "hostNote": "Astuce : Même si Mercure est la plus proche, Vénus est en réalité la plus chaude en raison de son effet de serre !",
+      "hint": "Son nom est aussi associé à un métal liquide et au messager des dieux."
+    },
+    {
+      "id": "q-sample-2",
+      "prompt": "Quels langages parmi les suivants s'exécutent nativement dans les moteurs des navigateurs web ? (Plusieurs réponses)",
+      "image": null,
+      "choices": [
+        { "id": "A", "text": "JavaScript" },
+        { "id": "B", "text": "Python" },
+        { "id": "C", "text": "WebAssembly (Wasm)" },
+        { "id": "D", "text": "C++" },
+        { "id": "E", "text": "Ruby" }
+      ],
+      "correctChoices": ["A", "C"],
+      "timer": 25,
+      "hostNote": "JavaScript et WebAssembly sont les deux seuls formats d'exécution standardisés et intégrés directement aux moteurs des navigateurs modernes.",
+      "hint": "Il y a 2 technologies web incontournables à cocher."
+    },
+    {
+      "id": "q-sample-3",
+      "prompt": "Quel est le plus grand océan de la Terre ? (3 choix)",
+      "image": null,
+      "choices": [
+        { "id": "A", "text": "Océan Atlantique" },
+        { "id": "B", "text": "Océan Indien" },
+        { "id": "C", "text": "Océan Pacifique" }
+      ],
+      "correctChoices": ["C"],
+      "timer": 15,
+      "hostNote": "Il couvre plus de 30% de la surface du globe, plus vaste que toutes les terres émergées réunies.",
+      "hint": "Son nom évoque le calme et la tranquillité."
+    },
+    {
+      "id": "q-sample-4",
+      "prompt": "Quels animaux sont des mammifères marins ? (Plusieurs réponses possibles)",
+      "image": null,
+      "choices": [
+        { "id": "A", "text": "Le Dauphin" },
+        { "id": "B", "text": "Le Requin blanc" },
+        { "id": "C", "text": "La Baleine bleue" },
+        { "id": "D", "text": "Le Thon rouge" },
+        { "id": "E", "text": "Le Morse" },
+        { "id": "F", "text": "La Raie Manta" }
+      ],
+      "correctChoices": ["A", "C", "E"],
+      "timer": 25,
+      "hostNote": "Dauphins, baleines et morses respirent de l'air à la surface et allaitent leurs petits, contrairement aux poissons (requins, thons, raies).",
+      "hint": "Pensez à ceux qui ont des poumons et allaitent leurs petits !"
+    },
+    {
+      "id": "q-sample-5",
+      "prompt": "Quel élément chimique a pour symbole « Au » ?",
+      "image": null,
+      "choices": [
+        { "id": "A", "text": "Argent" },
+        { "id": "B", "text": "Or" },
+        { "id": "C", "text": "Aluminium" },
+        { "id": "D", "text": "Argon" }
+      ],
+      "correctChoices": ["B"],
+      "timer": 15,
+      "hostNote": "Provient du latin « Aurum » qui signifie étincelant ou éclatant.",
+      "hint": "Le métal précieux le plus convoité pour les médailles de 1ère place."
+    }
+  ]
+}
