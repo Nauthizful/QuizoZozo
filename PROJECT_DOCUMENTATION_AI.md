@@ -1,24 +1,24 @@
 # 📖 SPECIFICATION TECHNIQUE & GUIDE COMPLET DU PROJET (POUR IA & DÉVELOPPEURS)
 
-> Ce document fournit une analyse exhaustive de l'architecture, du modèle de données, du protocole WebSocket temps réel, du système de scoring, des 5 thèmes graphiques et de la procédure de déploiement de l'application **Realtime Quiz (Kahoot-Style Sans PIN)**.
+> Ce document fournit une analyse exhaustive de l'architecture, du modèle de données, du protocole WebSocket temps réel, du système de scoring, des 5 thèmes graphiques et de la procédure de déploiement de l'application **QuizoZozo (Quiz Kahoot-Style Sans PIN)**.
 
 ---
 
 ## 1. VUE D'ENSEMBLE DU PROJET
 
-- **Nom du projet** : `realtime-quiz`
+- **Nom du projet** : `QuizoZozo`
 - **Objectif** : Application web de quiz interactif multijoueur en temps réel sans code PIN.
 - **Philosophie technique** :
-  - **Backend** : Node.js + Express (serveur HTTP & API REST) + Socket.io (WebSocket bidirectionnel) + Multer (gestion des médias).
+  - **Backend** : Node.js + Express (serveur HTTP & API REST) + Socket.io (WebSocket bidirectionnel) + Multer (gestion des médias) + Adm-Zip (export/import ZIP).
   - **Frontend** : Vanilla HTML5, CSS3 moderne (Variables CSS, Flexbox/Grid, Glassmorphism, animations) et JavaScript Vanilla ES6+. Aucun framework lourd (pas de React/Vue/Angular) pour garantir une légèreté extrême, un chargement instantané et une maintenance aisée.
-  - **Stockage** : Objet en mémoire `gameState` sur le serveur + dossier `/uploads` pour les images + export/import JSON pour la persistance et la portabilité des quiz.
+  - **Stockage** : Objet en mémoire `gameState` sur le serveur + dossier `/uploads` pour les images + export/import JSON et ZIP pour la persistance et la portabilité des quiz.
 
 ---
 
 ## 2. ARBORESCENCE ET RÔLE DES FICHIERS
 
 ```text
-realtime-quiz/
+quizozozo/
 ├── package.json               # Dépendances (express, socket.io, multer, qrcode) et scripts
 ├── server.js                  # Cœur backend : serveur Express, Socket.io, gameState, chronos & uploads
 ├── uploads/                   # Dossier contenant les images uploadées pour les questions
@@ -214,7 +214,7 @@ Lorsque l'animateur clique sur le bouton rouge **"SUPPRIMER LE QUIZZ"** dans la 
 - **npm** (inclus avec Node.js).
 
 ### B. Déploiement Local / LAN (Wi-Fi)
-1. Cloner ou copier le dossier `realtime-quiz` sur la machine hôte.
+1. Cloner ou copier le dossier `QuizoZozo` sur la machine hôte.
 2. Ouvrir un terminal dans le dossier et installer les dépendances :
    ```bash
    npm install
@@ -239,7 +239,7 @@ Lorsque l'animateur clique sur le bouton rouge **"SUPPRIMER LE QUIZZ"** dans la 
 npm install -g pm2
 
 # 2. Lancement en arrière-plan avec restart automatique
-pm2 start server.js --name "realtime-quiz"
+pm2 start server.js --name "quizozozo"
 
 # 3. Configuration au démarrage du système
 pm2 startup

@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Main Render Function
   function renderDisplay(state) {
-    displayQuizTitle.textContent = state.title || 'Grand Quiz';
+    displayQuizTitle.textContent = state.title || 'QuizoZozo';
     displayConnectedCount.textContent = state.connectedCount || 0;
 
     switch (state.status) {

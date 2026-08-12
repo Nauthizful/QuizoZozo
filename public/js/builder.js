@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/quiz/data');
       const data = await res.json();
       if (data) {
-        quizTitleInput.value = data.title || 'Grand Quiz en Direct !';
+        quizTitleInput.value = data.title || 'QuizoZozo en Direct !';
         quizThemeSelect.value = data.theme || 'quizz-moderne';
         currentQuestions = data.questions || [];
         renderQuestionsList();
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: quizTitleInput.value.trim() || 'Grand Quiz en Direct !',
+          title: quizTitleInput.value.trim() || 'QuizoZozo en Direct !',
           theme: quizThemeSelect.value || 'quizz-moderne',
           questions: currentQuestions
         })
@@ -467,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         if (data.success) {
           currentQuestions = data.questions;
-          quizTitleInput.value = 'Grand Quiz en Direct !';
+          quizTitleInput.value = 'QuizoZozo en Direct !';
           quizThemeSelect.value = data.theme || 'quizz-moderne';
           renderQuestionsList();
           resetForm();

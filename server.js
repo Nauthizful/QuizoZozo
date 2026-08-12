@@ -188,7 +188,7 @@ function normalizeQuestion(q, idx = 0) {
 // In-Memory Game State
 let gameState = {
   status: 'LOBBY', // 'LOBBY' | 'QUESTION' | 'REVEAL' | 'LEADERBOARD' | 'GAME_OVER'
-  title: 'Grand Quiz en Direct !',
+  title: 'QuizoZozo en Direct !',
   theme: 'quizz-moderne', // 'quizz-moderne' | 'geek-it' | 'mariage-automne' | 'windows-xp' | 'synthwave-arcade'
   currentQuestionIndex: 0,
   timeRemaining: 20,
@@ -702,7 +702,7 @@ app.post('/api/quiz/save', (req, res) => {
 // Reset Sample Quiz
 app.post('/api/quiz/sample', (req, res) => {
   gameState.questions = defaultQuestions.map((q, idx) => normalizeQuestion(q, idx));
-  gameState.title = 'Grand Quiz en Direct !';
+  gameState.title = 'QuizoZozo en Direct !';
   gameState.theme = 'quizz-moderne';
   gameState.status = 'LOBBY';
   gameState.currentQuestionIndex = 0;
@@ -938,10 +938,10 @@ io.on('connection', (socket) => {
 // Start Server
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
-  console.log(`🚀 SERVEUR QUIZ EN TEMPS RÉEL DÉMARRÉ SUR LE PORT ${PORT}`);
+  console.log(`🚀 SERVEUR QUIZOZOZO DÉMARRÉ SUR LE PORT ${PORT}`);
   console.log(`📱 Page Invité (Joueurs)     : http://localhost:${PORT}/`);
   console.log(`🖥️  Page Grand Écran (Projo)  : http://localhost:${PORT}/display`);
   console.log(`🎙️  Page Régie Admin (Host)   : http://localhost:${PORT}/admin`);
-  console.log(`✏️  Créateur de Quiz (Builder) : http://localhost:${PORT}/admin/builder`);
+  console.log(`✏️  QuizoZozo Builder         : http://localhost:${PORT}/admin/builder`);
   console.log(`====================================================`);
 });

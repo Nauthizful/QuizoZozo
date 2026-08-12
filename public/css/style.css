@@ -198,7 +198,7 @@
 }
 
 [data-theme="windows-xp"] .glass-card::before {
-  content: '📁 Quiz Arena - Microsoft Windows XP';
+  content: '📁 QuizoZozo - Microsoft Windows XP';
   position: absolute;
   top: -24px;
   left: 8px;

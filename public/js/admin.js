@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Render Admin UI
   function renderAdmin(state) {
-    adminQuizTitle.textContent = state.title || 'Grand Quiz';
+    adminQuizTitle.textContent = state.title || 'QuizoZozo';
     adminConnectedCount.textContent = state.connectedCount || 0;
     adminStatusBadge.textContent = state.status;
     isPaused = state.isTimerPaused;
