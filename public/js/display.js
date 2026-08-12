@@ -116,14 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Shapes & Colors Map (3 to 6)
+  // Color Palette Map (3 to 6)
   const choiceMetadata = {
-    A: { shape: '▲', cls: 'choice-a', color: 'var(--color-red)' },
-    B: { shape: '◆', cls: 'choice-b', color: 'var(--color-blue)' },
-    C: { shape: '●', cls: 'choice-c', color: 'var(--color-yellow)' },
-    D: { shape: '■', cls: 'choice-d', color: 'var(--color-green)' },
-    E: { shape: '★', cls: 'choice-e', color: 'var(--color-purple)' },
-    F: { shape: '✦', cls: 'choice-f', color: 'var(--color-cyan)' }
+    A: { cls: 'choice-a', color: 'var(--color-red)' },
+    B: { cls: 'choice-b', color: 'var(--color-blue)' },
+    C: { cls: 'choice-c', color: 'var(--color-yellow)' },
+    D: { cls: 'choice-d', color: 'var(--color-green)' },
+    E: { cls: 'choice-e', color: 'var(--color-purple)' },
+    F: { cls: 'choice-f', color: 'var(--color-cyan)' }
   };
 
   // Generate Dynamic QR Code
@@ -360,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Render choices grid for 3 to 6 choices
+  // Render choices grid for 3 to 6 choices (Text and colors only, no shape symbols)
   function renderChoicesGrid(choices) {
     displayChoicesGrid.innerHTML = '';
     const count = choices.length;
@@ -371,14 +371,13 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (count === 6) displayChoicesGrid.classList.add('grid-6');
 
     choices.forEach(c => {
-      const meta = choiceMetadata[c.id] || { shape: c.id, cls: 'choice-a' };
+      const meta = choiceMetadata[c.id] || { cls: 'choice-a' };
       const el = document.createElement('div');
       el.className = `choice-btn ${meta.cls}`;
       el.dataset.choiceId = c.id;
 
       el.innerHTML = `
-        <div class="choice-shape">${meta.shape}</div>
-        <div class="choice-text">${escapeHtml(c.text)}</div>
+        <div class="choice-text" style="width: 100%; text-align: center;">${escapeHtml(c.text)}</div>
       `;
 
       displayChoicesGrid.appendChild(el);
@@ -391,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalVotes = distribution ? (distribution.total || 0) : 0;
 
     choices.forEach(c => {
-      const meta = choiceMetadata[c.id] || { shape: c.id, cls: 'choice-a', color: '#8B5CF6' };
+      const meta = choiceMetadata[c.id] || { cls: 'choice-a', color: '#8B5CF6' };
       const count = distribution ? (distribution[c.id] || 0) : 0;
       const percent = totalVotes > 0 ? (count / totalVotes) : 0;
       const barHeight = Math.max(25, Math.round(percent * 140) + 25);
@@ -403,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${count} (${Math.round(percent * 100)}%)
         </div>
         <div class="histogram-label" style="color: ${meta.color};">
-          ${meta.shape} ${c.id}
+          ${escapeHtml(c.text)}
         </div>
       `;
       displayHistogramBars.appendChild(wrapper);
