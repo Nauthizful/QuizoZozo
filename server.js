@@ -884,6 +884,30 @@ io.on('connection', (socket) => {
     handleReveal();
   });
 
+  // 6. Admin Kick Player (Moderation)
+  socket.on('admin_kick_player', ({ guestId, playerId }) => {
+    const targetId = guestId || playerId;
+    if (!targetId || !gameState.players[targetId]) return;
+
+    const kickedPlayer = gameState.players[targetId];
+    console.log(`[MODERATION] Expulsion du joueur : ${kickedPlayer.name} (${targetId})`);
+
+    // Delete player from gameState
+    delete gameState.players[targetId];
+
+    // Emit 'kicked' to target sockets and clean up
+    io.sockets.sockets.forEach(s => {
+      if (s.guestId === targetId || (kickedPlayer.socketId && s.id === kickedPlayer.socketId)) {
+        s.emit('kicked', { message: 'Vous avez été exclu de la partie par l\'animateur.' });
+        s.leave('guests');
+        delete s.guestId;
+      }
+    });
+
+    // Broadcast updated state to all screens
+    broadcastFullState();
+  });
+
   // 6. Delete / Wipe Quiz (PHYSICALLY DELETES ALL FILES IN /UPLOADS/)
   socket.on('admin_delete_quiz', async () => {
     stopTimer();

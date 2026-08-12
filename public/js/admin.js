@@ -1,4 +1,4 @@
-// Admin Control Room Client Logic (Supports 3-6 Choices & Reveal-first workflow)
+// Admin Control Room Client Logic (Moderation / Kick, Timers, Reveal Workflow)
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Next Question Card
   const adminNextQPrompt = document.getElementById('admin-next-q-prompt');
   const adminNextQAnswer = document.getElementById('admin-next-q-answer');
+
+  // Players Moderation List
+  const adminPlayersList = document.getElementById('admin-players-list');
+  const adminPlayersBadge = document.getElementById('admin-players-badge');
 
   // Buttons
   const btnStartGame = document.getElementById('btn-start-game');
@@ -64,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  socket.on('answer_update', ({ answeredCount, connectedCount, distribution }) => {
+  socket.on('answer_update', ({ answeredCount, connectedCount }) => {
     updateGauge(answeredCount, connectedCount);
   });
 
@@ -137,6 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
     adminGaugeFill.style.width = `${percent}%`;
   }
 
+  // Global Kick Function exposed on window
+  window.kickPlayer = (guestId, name) => {
+    if (confirm(`Voulez-vous vraiment exclure le joueur « ${name} » de la partie ?`)) {
+      socket.emit('admin_kick_player', { guestId });
+    }
+  };
+
   // Render Admin UI
   function renderAdmin(state) {
     adminQuizTitle.textContent = state.title || 'QuizoZozo';
@@ -166,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
         adminStatusBadge.className = 'badge badge-warning';
         adminQuestionEmpty.classList.add('hidden');
         adminQuestionActive.classList.remove('hidden');
-        // In Question state: Host has "Afficher la réponse"
         btnRevealAnswer.classList.remove('hidden');
         btnRevealAnswer.textContent = '👁️ Afficher la réponse';
         renderQuestionData(state);
@@ -176,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         adminStatusBadge.className = 'badge badge-success';
         adminQuestionEmpty.classList.add('hidden');
         adminQuestionActive.classList.remove('hidden');
-        // In Reveal state: Host can show leaderboard or go directly to next question
         btnShowLeaderboard.classList.remove('hidden');
         btnNextQuestion.classList.remove('hidden');
         renderQuestionData(state);
@@ -205,6 +214,48 @@ document.addEventListener('DOMContentLoaded', () => {
       adminNextQPrompt.textContent = 'Dernière question atteinte ou aucune question suivante.';
       adminNextQAnswer.textContent = 'Fin du quiz.';
     }
+
+    // Render Players Moderation List
+    renderPlayersList(state.allPlayers || []);
+  }
+
+  function renderPlayersList(players) {
+    if (!adminPlayersList) return;
+
+    adminPlayersBadge.textContent = `${players.length}`;
+
+    if (players.length === 0) {
+      adminPlayersList.innerHTML = `
+        <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; padding: 1.25rem 0;">
+          Aucun joueur connecté pour le moment.
+        </div>
+      `;
+      return;
+    }
+
+    adminPlayersList.innerHTML = players.map(p => {
+      const connIcon = p.isConnected ? '🟢' : '⚪';
+      const answeredBadge = p.hasAnswered
+        ? `<span style="font-size: 0.75rem; color: #34D399; font-weight: 700;">✅ Voté</span>`
+        : `<span style="font-size: 0.75rem; color: var(--text-muted);">⏳ En attente</span>`;
+
+      return `
+        <div class="player-admin-row">
+          <div class="flex-row items-center gap-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <span title="${p.isConnected ? 'En ligne' : 'Déconnecté'}">${connIcon}</span>
+            <strong style="color: #FFF; font-size: 0.95rem;">${escapeHtml(p.name)}</strong>
+            <span style="color: var(--text-secondary); font-size: 0.8rem;">(${p.score || 0} pts)</span>
+          </div>
+
+          <div class="flex-row items-center gap-2">
+            ${currentState && currentState.status === 'QUESTION' ? answeredBadge : ''}
+            <button type="button" class="btn-kick" onclick="window.kickPlayer('${p.id}', '${escapeHtml(p.name)}')" title="Exclure ce joueur de la session">
+              ✕
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   function renderQuestionData(state) {
@@ -257,5 +308,15 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       adminHintBox.classList.add('hidden');
     }
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 });

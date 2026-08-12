@@ -1,4 +1,4 @@
-// Display / Grand Screen Client Logic (Theme-aware & Dynamic 3-6 Choices)
+// Display / Grand Screen Client Logic (Theme-aware, Dynamic 3-6 Choices & Audio Engine)
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const displayAnsweredBadge = document.getElementById('display-answered-badge');
   const displayAnsweredCount = document.getElementById('display-answered-count');
   const displayTotalCount = document.getElementById('display-total-count');
+
+  // Audio Elements
+  const btnAudioToggle = document.getElementById('btn-audio-toggle');
+  const audioIcon = document.getElementById('audio-icon');
+  const audioText = document.getElementById('audio-text');
 
   // Views
   const viewLobby = document.getElementById('display-view-lobby');
@@ -43,6 +48,73 @@ document.addEventListener('DOMContentLoaded', () => {
   const podiumName3 = document.getElementById('podium-name-3');
   const podiumScore3 = document.getElementById('podium-score-3');
   const leaderboardExtraList = document.getElementById('leaderboard-extra-list');
+
+  // Audio Engine instances
+  let audioEnabled = false;
+  const audioFiles = {
+    countdown: new Audio('/audio/5secondes.mp3'),
+    drumroll: new Audio('/audio/roulement_de_tambour.wav'),
+    reveal: new Audio('/audio/reponse_revelation.mp3'),
+    victory: new Audio('/audio/podium_victoire.mp3')
+  };
+
+  // Preload audio
+  Object.values(audioFiles).forEach(a => {
+    a.preload = 'auto';
+  });
+
+  function playSound(name) {
+    if (!audioEnabled || !audioFiles[name]) return;
+    try {
+      const snd = audioFiles[name];
+      snd.currentTime = 0;
+      const playPromise = snd.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.warn(`[AUDIO] Autoplay bloqué pour ${name}:`, err);
+        });
+      }
+    } catch (e) {
+      console.warn('[AUDIO] Erreur lecture:', e);
+    }
+  }
+
+  function stopAllSounds() {
+    Object.values(audioFiles).forEach(a => {
+      try {
+        a.pause();
+        a.currentTime = 0;
+      } catch (e) {}
+    });
+  }
+
+  // Audio Toggle Button (unlocks browser autoplay policy on 1st click)
+  if (btnAudioToggle) {
+    btnAudioToggle.addEventListener('click', () => {
+      audioEnabled = !audioEnabled;
+      if (audioEnabled) {
+        audioIcon.textContent = '🔊';
+        audioText.textContent = 'Son activé';
+        btnAudioToggle.classList.remove('btn-secondary');
+        btnAudioToggle.classList.add('btn-primary');
+        // Test/warm-up playback to unlock AudioContext
+        try {
+          const testAudio = audioFiles.reveal;
+          testAudio.volume = 0.01;
+          testAudio.play().then(() => {
+            testAudio.pause();
+            testAudio.volume = 1.0;
+          }).catch(() => {});
+        } catch (e) {}
+      } else {
+        stopAllSounds();
+        audioIcon.textContent = '🔇';
+        audioText.textContent = 'Activer le son';
+        btnAudioToggle.classList.remove('btn-primary');
+        btnAudioToggle.classList.add('btn-secondary');
+      }
+    });
+  }
 
   // Shapes & Colors Map (3 to 6)
   const choiceMetadata = {
@@ -94,14 +166,47 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.dataset.theme = validTheme;
   }
 
+  let previousStatus = null;
+  let lastPlayedCountdown = null;
+
   // Socket Events
   socket.on('display_state', (state) => {
     if (state.theme) applyTheme(state.theme);
+
+    // Audio triggers on state change
+    if (previousStatus !== state.status) {
+      if (state.status === 'QUESTION') {
+        stopAllSounds();
+        lastPlayedCountdown = null;
+      } else if (state.status === 'REVEAL') {
+        stopAllSounds();
+        playSound('reveal');
+      } else if (state.status === 'LEADERBOARD' || state.status === 'GAME_OVER') {
+        stopAllSounds();
+        playSound('victory');
+      } else if (state.status === 'LOBBY') {
+        stopAllSounds();
+      }
+      previousStatus = state.status;
+    }
+
     renderDisplay(state);
   });
 
   socket.on('timer_tick', ({ timeRemaining, totalQuestionTime }) => {
     updateTimerVisual(timeRemaining, totalQuestionTime);
+
+    // Play 5 seconds countdown sound once when hitting exactly 5s
+    if (timeRemaining === 5 && lastPlayedCountdown !== 5) {
+      lastPlayedCountdown = 5;
+      playSound('countdown');
+    }
+
+    // Play drumroll for suspense when 2 seconds remain
+    if (timeRemaining === 2 && lastPlayedCountdown !== 2) {
+      lastPlayedCountdown = 2;
+      playSound('drumroll');
+    }
   });
 
   socket.on('answer_update', ({ answeredCount, connectedCount }) => {
@@ -110,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   socket.on('quiz_wiped', () => {
+    stopAllSounds();
     showSection(viewLobby);
   });
 
@@ -150,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
           lobbyPlayersGrid.innerHTML = state.playersList.map(p => `
             <div class="player-tag">
               <span>👤</span>
-              <span>${p.name}</span>
+              <span>${escapeHtml(p.name)}</span>
             </div>
           `).join('');
         }
@@ -240,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="leaderboard-item animate-slide-up">
               <div class="flex-row items-center gap-4">
                 <div class="leaderboard-rank">${idx + 4}</div>
-                <div>${p.name}</div>
+                <div>${escapeHtml(p.name)}</div>
               </div>
               <div style="color: var(--text-accent); font-weight: 800;">${p.score} pts</div>
             </div>
@@ -272,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       el.innerHTML = `
         <div class="choice-shape">${meta.shape}</div>
-        <div class="choice-text">${c.text}</div>
+        <div class="choice-text">${escapeHtml(c.text)}</div>
       `;
 
       displayChoicesGrid.appendChild(el);
@@ -302,5 +408,15 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       displayHistogramBars.appendChild(wrapper);
     });
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 });

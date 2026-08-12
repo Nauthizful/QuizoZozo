@@ -259,6 +259,74 @@
 }
 
 /* ==========================================================================
+   6. THEME : ÉCLIPSE SOLAIRE & PLUIE D'ÉTOILES FILANTES
+   ========================================================================== */
+[data-theme="eclipse-etoiles"] {
+  --color-red: #E11D48;
+  --color-red-glow: rgba(225, 29, 72, 0.5);
+  --color-blue: #2563EB;
+  --color-blue-glow: rgba(37, 99, 235, 0.5);
+  --color-yellow: #D97706;
+  --color-yellow-glow: rgba(217, 119, 6, 0.5);
+  --color-green: #059669;
+  --color-green-glow: rgba(5, 150, 105, 0.5);
+  --color-purple: #7C3AED;
+  --color-purple-glow: rgba(124, 58, 237, 0.5);
+  --color-cyan: #0891B2;
+  --color-cyan-glow: rgba(8, 145, 178, 0.5);
+
+  --bg-main: #05050A;
+  --bg-card: rgba(10, 13, 24, 0.82);
+  --bg-surface: #0E1224;
+  --border-glass: rgba(251, 191, 36, 0.25);
+  --border-glass-strong: rgba(251, 191, 36, 0.6);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
+  --text-accent: #FBBF24;
+
+  --font-family: 'Outfit', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+  --radius-card: 20px;
+  --radius-btn: 14px;
+  --radius-shape: 8px;
+  --box-shadow-card: 0 0 35px rgba(245, 158, 11, 0.12), inset 0 0 25px rgba(99, 102, 241, 0.08);
+
+  --bg-body-custom:
+    radial-gradient(circle at 50% 15%, rgba(245, 158, 11, 0.22) 0%, rgba(99, 102, 241, 0.12) 35%, transparent 70%),
+    radial-gradient(circle at 85% 75%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 15% 85%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+    radial-gradient(1.5px 1.5px at 20px 30px, #FFFFFF, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 70px 120px, #FDE047, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 150px 80px, #E0E7FF, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 220px 260px, #FFFFFF, rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 310px 190px, #FBBF24, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 400px 340px, #E0E7FF, rgba(0,0,0,0)),
+    linear-gradient(180deg, #05050A 0%, #0A0C1A 50%, #06070E 100%);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 350px 350px, 350px 350px, 350px 350px, 350px 350px, 350px 350px, 350px 350px, 100% 100% !important;
+}
+
+[data-theme="eclipse-etoiles"] .glass-card {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.15), 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid rgba(251, 191, 36, 0.28) !important;
+}
+
+[data-theme="eclipse-etoiles"] h1, [data-theme="eclipse-etoiles"] h2 {
+  background: linear-gradient(135deg, #FFFFFF 20%, #FDE047 70%, #F59E0B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="eclipse-etoiles"] .guest-choice-btn.is-selected {
+  border-color: #FDE047 !important;
+  box-shadow: 0 0 25px rgba(253, 224, 71, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ==========================================================================
    GLOBAL RESET & STRUCTURE
    ========================================================================== */
 *, *::before, *::after {

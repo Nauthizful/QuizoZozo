@@ -167,11 +167,12 @@ $$\text{Points} = \text{Math.round}\left(\text{PointsMaxVitesse} \times \text{Fr
 | `admin_resume_timer`| Régie Admin | *aucun* | Reprend le chronomètre |
 | `admin_add_time`  | Régie Admin | `{ seconds: number }` | Ajoute +10s au chronomètre en cours |
 | `admin_force_end` | Régie Admin | *aucun* | Force la fin immédiate et déclenche la révélation |
+| `admin_kick_player` | Régie Admin | `{ guestId: string }` | Supprime le joueur, émet `kicked` ciblé et met à jour les écrans |
 | `admin_delete_quiz`| Régie Admin | *aucun* | Vide `gameState` et supprime physiquement les fichiers dans `/uploads/` |
 
 ---
 
-## 7. SYSTÈME DES 5 THÈMES GRAPHIQUES DYNAMIQUES
+## 7. SYSTÈME DES 6 THÈMES GRAPHIQUES DYNAMIQUES
 
 L'attribut `data-theme` est appliqué dynamiquement sur la balise `<body>` des pages **Joueur (`/`)** et **Grand Écran (`/display`)** selon la valeur de `gameState.theme` :
 
@@ -180,6 +181,23 @@ L'attribut `data-theme` est appliqué dynamiquement sur la balise `<body>` des p
 3. `mariage-automne` : Palette chaleureuse Terracotta, or ambré, vert sauge boisé et lie de vin, typographie sérif *Cinzel* & *Playfair Display*.
 4. `windows-xp` : Rétro 2000s, fond Colline Bliss, fenêtres et barres bleu Luna, boutons 3D biseautés, police *Tahoma*.
 5. `synthwave-arcade` : Grille wireframe au sol, coucher de soleil néon rétro, éclats rose & cyan laser, police pixel art *Press Start 2P*.
+6. `eclipse-etoiles` : Nuit spatiale et fond cosmique profond, accents or et platine étincelants, halo lumineux doré, 6 cartes de réponses cosmiques contrastées.
+
+---
+
+## 7bis. FONCTIONNALITÉS AVANCÉES & MOTEURS
+
+### A. Moteur Sonore (`/display`)
+- Géré dans `display.js` avec fichiers audio dans `public/audio/` :
+  - `5secondes.mp3` : Joué lorsque `timeRemaining === 5`.
+  - `roulement_de_tambour.wav` : Joué pour le suspense à `timeRemaining === 2`.
+  - `reponse_revelation.mp3` : Joué lors du passage en `REVEAL`.
+  - `podium_victoire.mp3` : Fanfare / célébration en `LEADERBOARD` et `GAME_OVER`.
+- Bouton de bascule audio discret pour déverrouiller la politique d'Autoplay des navigateurs.
+
+### B. Maintien de l'écran allumé (Wake Lock API)
+- Intégré dans `guest.js` via `navigator.wakeLock.request('screen')`.
+- Empêche les smartphones des invités de s'éteindre ou passer en veille pendant la partie, avec réactivation automatique lors du retour au premier plan (`visibilitychange`).
 
 ---
 

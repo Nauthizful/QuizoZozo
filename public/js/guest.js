@@ -1,6 +1,6 @@
-// Guest Client Logic (Answer Text & Colors Only - No Prompt/Image Spoilers)
+// Guest Client Logic (Answer Text & Colors, Wake Lock API & Kick Handling)
 document.addEventListener('DOMContentLoaded', () => {
-  const socket = io();
+  let socket = io();
 
   // Elements
   const viewJoin = document.getElementById('view-join');
@@ -8,11 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewQuestion = document.getElementById('view-question');
   const viewResult = document.getElementById('view-result');
   const viewGameover = document.getElementById('view-gameover');
+  const viewKicked = document.getElementById('view-kicked');
 
   const joinForm = document.getElementById('join-form');
   const playerNameInput = document.getElementById('player-name-input');
   const lobbyPlayerName = document.getElementById('lobby-player-name');
   const btnChangeName = document.getElementById('btn-change-name');
+  const btnRejoinAfterKick = document.getElementById('btn-rejoin-after-kick');
 
   const guestHeaderName = document.getElementById('guest-header-name');
   const guestHeaderScore = document.getElementById('guest-header-score');
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let playerName = localStorage.getItem('quiz_guest_name');
   let selectedChoices = [];
   let currentServerState = null;
+  let isKicked = false;
 
   // Generate UUID if not present
   if (!guestId) {
@@ -53,9 +56,38 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('quiz_guest_id', guestId);
   }
 
+  // ==========================================
+  // WAKE LOCK API (Anti-veille écran smartphone)
+  // ==========================================
+  let wakeLockSentinel = null;
+
+  async function requestWakeLock() {
+    if ('wakeLock' in navigator && !isKicked) {
+      try {
+        if (!wakeLockSentinel) {
+          wakeLockSentinel = await navigator.wakeLock.request('screen');
+          console.log('⚡ [WAKE LOCK] Écran verrouillé actif (anti-veille)');
+          wakeLockSentinel.addEventListener('release', () => {
+            console.log('⚡ [WAKE LOCK] Écran relâché');
+            wakeLockSentinel = null;
+          });
+        }
+      } catch (err) {
+        console.warn('⚠️ [WAKE LOCK] Requête ignorée ou non autorisée :', err.name, err.message);
+      }
+    }
+  }
+
+  // Auto re-acquire wake lock on visibility change
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && playerName && !isKicked) {
+      await requestWakeLock();
+    }
+  });
+
   // View Switcher Helper
   function showView(viewToShow) {
-    [viewJoin, viewLobby, viewQuestion, viewResult, viewGameover].forEach(view => {
+    [viewJoin, viewLobby, viewQuestion, viewResult, viewGameover, viewKicked].forEach(view => {
       if (view) {
         if (view === viewToShow) {
           view.classList.remove('hidden');
@@ -78,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       guestHeaderName.textContent = playerName;
       lobbyPlayerName.textContent = playerName;
       socket.emit('register_guest', { guestId, name: playerName });
+      requestWakeLock();
     } else {
       showView(viewJoin);
     }
@@ -89,10 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const enteredName = playerNameInput.value.trim();
     if (enteredName) {
       playerName = enteredName;
+      isKicked = false;
       localStorage.setItem('quiz_guest_name', playerName);
       guestHeaderName.textContent = playerName;
       lobbyPlayerName.textContent = playerName;
+      if (!socket.connected) {
+        socket.connect();
+      }
       socket.emit('register_guest', { guestId, name: playerName });
+      requestWakeLock();
       showView(viewLobby);
     }
   });
@@ -105,14 +143,34 @@ document.addEventListener('DOMContentLoaded', () => {
     showView(viewJoin);
   });
 
+  // Rejoin After Kick Button
+  if (btnRejoinAfterKick) {
+    btnRejoinAfterKick.addEventListener('click', () => {
+      isKicked = false;
+      guestId = 'guest_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
+      localStorage.setItem('quiz_guest_id', guestId);
+      localStorage.removeItem('quiz_guest_name');
+      playerName = null;
+      playerNameInput.value = '';
+      guestHeaderScore.textContent = '0';
+      guestHeaderName.textContent = 'Joueur';
+      if (!socket.connected) {
+        socket.connect();
+      }
+      showView(viewJoin);
+    });
+  }
+
   // Socket Events
   socket.on('guest_state', (state) => {
+    if (isKicked) return;
     currentServerState = state;
     if (state.theme) applyTheme(state.theme);
     renderState(state);
   });
 
   socket.on('timer_tick', ({ timeRemaining }) => {
+    if (isKicked) return;
     if (guestTimerText) {
       guestTimerText.textContent = `${timeRemaining}s`;
       if (timeRemaining <= 5) {
@@ -123,7 +181,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Kick Event Handler (Moderation)
+  socket.on('kicked', ({ message }) => {
+    console.warn('[MODERATION] Vous avez été exclu :', message);
+    isKicked = true;
+
+    // Release wake lock
+    if (wakeLockSentinel) {
+      try { wakeLockSentinel.release(); } catch (e) {}
+      wakeLockSentinel = null;
+    }
+
+    // Clear local storage data
+    localStorage.removeItem('quiz_guest_id');
+    localStorage.removeItem('quiz_guest_name');
+    playerName = null;
+
+    guestGameStatus.textContent = 'Exclu';
+    guestGameStatus.className = 'badge badge-danger';
+
+    showView(viewKicked);
+
+    // Disconnect socket
+    socket.disconnect();
+  });
+
   socket.on('quiz_wiped', () => {
+    if (isKicked) return;
     localStorage.removeItem('quiz_guest_name');
     playerName = null;
     guestHeaderScore.textContent = '0';
@@ -132,6 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Main UI Renderer
   function renderState(state) {
+    if (isKicked) return;
+
     if (!playerName) {
       showView(viewJoin);
       return;
@@ -275,14 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.classList.add('is-selected');
       }
 
-      // Display the response text directly without symbols
-      btn.innerHTML = `<span style="width: 100%; text-align: center;">${c.text}</span>`;
+      btn.innerHTML = `<span style="width: 100%; text-align: center;">${escapeHtml(c.text)}</span>`;
 
       btn.addEventListener('click', () => {
         if (currentServerState && currentServerState.status !== 'QUESTION') return;
 
         if (isMultiple) {
-          // Toggle choice
           if (selectedChoices.includes(c.id)) {
             selectedChoices = selectedChoices.filter(x => x !== c.id);
             btn.classList.remove('is-selected');
@@ -291,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('is-selected');
           }
         } else {
-          // Single choice
           selectedChoices = [c.id];
           document.querySelectorAll('.guest-choice-btn').forEach(b => b.classList.remove('is-selected'));
           btn.classList.add('is-selected');
@@ -304,6 +387,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       guestChoicesContainer.appendChild(btn);
     });
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   // Kickstart
