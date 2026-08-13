@@ -49,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultPoints = document.getElementById('result-points');
   const resultCorrectText = document.getElementById('result-correct-text');
   const resultYourChoiceText = document.getElementById('result-your-choice-text');
+  const resultProximityBox = document.getElementById('result-proximity-box');
+  const resultProximityText = document.getElementById('result-proximity-text');
   const gameoverFinalScore = document.getElementById('gameover-final-score');
 
   // Color classes map (A to F)
@@ -471,6 +473,23 @@ document.addEventListener('DOMContentLoaded', () => {
             resultPoints.style.color = '#EF4444';
           }
 
+          // Display Score Proximity Message
+          if (resultProximityBox && resultProximityText) {
+            if (state.proximity) {
+              if (state.proximity.isFirst) {
+                resultProximityText.innerHTML = `👑 <strong>Tu es en tête de la partie !</strong> Garde le rythme !`;
+                resultProximityBox.style.borderColor = '#F59E0B';
+              } else {
+                const aheadText = state.proximity.aheadPlayerName ? ` (${escapeHtml(state.proximity.aheadPlayerName)})` : '';
+                resultProximityText.innerHTML = `🎯 Tu n'es qu'à <strong style="color: #FBBF24;">${state.proximity.pointsBehind} point(s)</strong> de la personne devant toi${aheadText} !`;
+                resultProximityBox.style.borderColor = '#38BDF8';
+              }
+              resultProximityBox.classList.remove('hidden');
+            } else {
+              resultProximityBox.classList.add('hidden');
+            }
+          }
+
           showView(viewResult);
         } else {
           resultIconContainer.textContent = '⌛';
@@ -479,6 +498,23 @@ document.addEventListener('DOMContentLoaded', () => {
           resultPoints.textContent = '+0 pt';
           resultCorrectText.textContent = state.reveal ? state.reveal.correctChoices.join(', ') : '';
           resultYourChoiceText.textContent = 'Votre vote : Aucun choix sélectionné';
+
+          if (resultProximityBox && resultProximityText) {
+            if (state.proximity) {
+              if (state.proximity.isFirst) {
+                resultProximityText.innerHTML = `👑 <strong>Tu es en tête de la partie !</strong> Garde le rythme !`;
+                resultProximityBox.style.borderColor = '#F59E0B';
+              } else {
+                const aheadText = state.proximity.aheadPlayerName ? ` (${escapeHtml(state.proximity.aheadPlayerName)})` : '';
+                resultProximityText.innerHTML = `🎯 Tu n'es qu'à <strong style="color: #FBBF24;">${state.proximity.pointsBehind} point(s)</strong> de la personne devant toi${aheadText} !`;
+                resultProximityBox.style.borderColor = '#38BDF8';
+              }
+              resultProximityBox.classList.remove('hidden');
+            } else {
+              resultProximityBox.classList.add('hidden');
+            }
+          }
+
           showView(viewResult);
         }
         break;

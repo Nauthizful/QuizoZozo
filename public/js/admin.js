@@ -277,19 +277,29 @@ document.addEventListener('DOMContentLoaded', () => {
         : `<span style="font-size: 0.75rem; color: var(--text-muted);">⏳ En attente</span>`;
 
       const avatarSvg = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(p.avatar, 28) : '';
+      
+      let rankBadge = `<span style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); min-width: 24px;">#${p.rank || '-'}</span>`;
+      if (p.rank === 1) {
+        rankBadge = `<span style="font-size: 0.85rem; font-weight: 900; color: #F59E0B; min-width: 24px;">🥇 1</span>`;
+      } else if (p.rank === 2) {
+        rankBadge = `<span style="font-size: 0.85rem; font-weight: 900; color: #94A3B8; min-width: 24px;">🥈 2</span>`;
+      } else if (p.rank === 3) {
+        rankBadge = `<span style="font-size: 0.85rem; font-weight: 900; color: #D97706; min-width: 24px;">🥉 3</span>`;
+      }
 
       return `
         <div class="player-admin-row">
           <div class="flex-row items-center gap-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${rankBadge}
             <span title="${p.isConnected ? 'En ligne' : 'Déconnecté'}">${connIcon}</span>
-            <div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">
+            <div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; min-width: 28px;">
               ${avatarSvg}
             </div>
             <strong style="color: #FFF; font-size: 0.95rem;">${escapeHtml(p.name)}</strong>
-            <span style="color: var(--text-secondary); font-size: 0.8rem;">(${p.score || 0} pts)</span>
           </div>
 
-          <div class="flex-row items-center gap-2">
+          <div class="flex-row items-center gap-3">
+            <span style="color: var(--text-accent); font-size: 0.9rem; font-weight: 800;">${p.score || 0} pts</span>
             ${currentState && currentState.status === 'QUESTION' ? answeredBadge : ''}
             <button type="button" class="btn-kick" onclick="window.kickPlayer('${p.id}', '${escapeHtml(p.name)}')" title="Exclure ce joueur de la session">
               ✕

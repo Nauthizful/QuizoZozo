@@ -37,6 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const displayReadingBanner = document.getElementById('display-reading-banner');
   const displayChoicesGrid = document.getElementById('display-choices-grid');
 
+  const displayFastestCard = document.getElementById('display-fastest-card');
+  const displayFastestAvatar = document.getElementById('display-fastest-avatar');
+  const displayFastestName = document.getElementById('display-fastest-name');
+  const displayFastestTime = document.getElementById('display-fastest-time');
+
   const histogramSection = document.getElementById('display-histogram-section');
   const displayHistogramBars = document.getElementById('display-histogram-bars');
 
@@ -302,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateTimerVisual('--', state.totalQuestionTime);
+        if (displayFastestCard) displayFastestCard.classList.add('hidden');
         showSection(viewQuestion);
         break;
 
@@ -314,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         displayQuestionNumber.textContent = `Question ${state.currentQuestionIndex + 1} / ${state.totalQuestions}`;
         histogramSection.classList.add('hidden');
         displayReadingBanner.classList.add('hidden');
+        if (displayFastestCard) displayFastestCard.classList.add('hidden');
         displayChoicesGrid.classList.remove('hidden');
 
         if (state.question) {
@@ -344,6 +351,16 @@ document.addEventListener('DOMContentLoaded', () => {
         displayReadingBanner.classList.add('hidden');
         displayChoicesGrid.classList.remove('hidden');
         histogramSection.classList.remove('hidden');
+
+        // Highlight fastest player who got it right
+        if (state.fastestPlayer && displayFastestCard) {
+          displayFastestName.textContent = state.fastestPlayer.name;
+          displayFastestTime.textContent = `${state.fastestPlayer.timeTaken.toFixed(1)}s`;
+          displayFastestAvatar.innerHTML = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(state.fastestPlayer.avatar, 36) : '⚡';
+          displayFastestCard.classList.remove('hidden');
+        } else if (displayFastestCard) {
+          displayFastestCard.classList.add('hidden');
+        }
 
         // Highlight correct choices and dim others
         if (state.correctChoices && Array.isArray(state.correctChoices)) {

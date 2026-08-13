@@ -211,11 +211,17 @@
           </p>
         </div>
 
-        <!-- Dynamic Choices Grid (3 to 6 choices) -->
-        <div class="answers-grid" id="display-choices-grid"></div>
+        <!-- FASTEST PLAYER HIGHLIGHT BANNER (Shown during REVEAL) -->
+        <div id="display-fastest-card" class="glass-card hidden animate-pop" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(236, 72, 153, 0.2)); border: 2px solid #F59E0B; margin: 1.5rem auto 0.5rem auto; padding: 0.85rem 1.5rem; max-width: 800px; display: flex; align-items: center; justify-content: center; gap: 1rem; box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);">
+          <div style="font-size: 2rem;">⚡</div>
+          <div id="display-fastest-avatar" class="user-mini-avatar" style="width: 44px; height: 44px; min-width: 44px;"></div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: #FFF; text-align: left;">
+            <strong id="display-fastest-name" style="color: #FDE047;">Prénom</strong> a été le plus rapide à trouver la bonne réponse en <strong id="display-fastest-time" style="color: #38BDF8;">0.0s</strong> !
+          </div>
+        </div>
 
         <!-- Revelation Histogram Section (Hidden during active question) -->
-        <div id="display-histogram-section" class="hidden animate-slide-up" style="margin-top: 2rem;">
+        <div id="display-histogram-section" class="hidden animate-slide-up" style="margin-top: 1.5rem;">
           <h3 class="text-center" style="font-size: 1.4rem; color: var(--text-secondary); margin-bottom: 1rem;">
             📊 Répartition des réponses des invités
           </h3>

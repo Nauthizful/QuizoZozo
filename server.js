@@ -283,6 +283,37 @@ function getLeaderboard(limit = 10) {
     .slice(0, limit);
 }
 
+function getPlayerProximity(guestId) {
+  const player = gameState.players[guestId];
+  if (!player) return null;
+
+  const sorted = Object.values(gameState.players)
+    .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  const rank = sorted.findIndex(p => p.id === guestId) + 1;
+  if (rank <= 0) return null;
+
+  if (rank === 1) {
+    return {
+      rank: 1,
+      isFirst: true,
+      pointsBehind: 0,
+      aheadPlayerName: null,
+      aheadPlayerScore: null
+    };
+  } else {
+    const aheadPlayer = sorted[rank - 2];
+    const diff = Math.max(0, (aheadPlayer.score || 0) - (player.score || 0));
+    return {
+      rank,
+      isFirst: false,
+      pointsBehind: diff,
+      aheadPlayerName: aheadPlayer.name,
+      aheadPlayerScore: aheadPlayer.score || 0
+    };
+  }
+}
+
 // Data projection filters
 function getGuestView(guestId) {
   const currentQ = getCurrentQuestion();
@@ -333,6 +364,7 @@ function getGuestView(guestId) {
       hasAnswered: !!(player.currentAnswer && player.currentAnswer.choices && player.currentAnswer.choices.length > 0),
       selectedChoices: player.currentAnswer ? (player.currentAnswer.choices || []) : []
     } : null,
+    proximity: getPlayerProximity(guestId),
     question: currentQ ? {
       id: currentQ.id,
       prompt: currentQ.prompt,
@@ -359,6 +391,7 @@ function getDisplayView() {
     isLastQuestion: isLastQuestion(),
     connectedCount: getConnectedPlayersCount(),
     answeredCount: getAnsweredPlayersCount(),
+    fastestPlayer: (gameState.status === 'REVEAL' || gameState.status === 'LEADERBOARD' || gameState.status === 'GAME_OVER') ? gameState.fastestPlayer : null,
     playersList: Object.values(gameState.players).map(p => ({
       id: p.id,
       name: p.name,
@@ -383,6 +416,20 @@ function getDisplayView() {
 function getAdminView() {
   const currentQ = getCurrentQuestion();
   const nextQ = getNextQuestion();
+  
+  const sortedAllPlayers = Object.values(gameState.players)
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .map((p, index) => ({
+      rank: index + 1,
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar || { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' },
+      score: p.score || 0,
+      isConnected: p.isConnected,
+      hasAnswered: !!(p.currentAnswer && p.currentAnswer.choices && p.currentAnswer.choices.length > 0),
+      lastPoints: p.currentAnswer ? p.currentAnswer.pointsEarned : 0
+    }));
+
   return {
     status: gameState.status,
     title: gameState.title,
@@ -395,6 +442,7 @@ function getAdminView() {
     isLastQuestion: isLastQuestion(),
     connectedCount: getConnectedPlayersCount(),
     answeredCount: getAnsweredPlayersCount(),
+    fastestPlayer: (gameState.status === 'REVEAL' || gameState.status === 'LEADERBOARD' || gameState.status === 'GAME_OVER') ? gameState.fastestPlayer : null,
     question: currentQ ? {
       id: currentQ.id,
       prompt: currentQ.prompt,
@@ -415,14 +463,7 @@ function getAdminView() {
     } : null,
     distribution: calculateAnswerDistribution(),
     leaderboard: getLeaderboard(10),
-    allPlayers: Object.values(gameState.players).map(p => ({
-      id: p.id,
-      name: p.name,
-      avatar: p.avatar || { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' },
-      score: p.score,
-      isConnected: p.isConnected,
-      hasAnswered: !!(p.currentAnswer && p.currentAnswer.choices && p.currentAnswer.choices.length > 0)
-    }))
+    allPlayers: sortedAllPlayers
   };
 }
 
@@ -504,6 +545,25 @@ function handleReveal() {
         if (p.currentAnswer) p.currentAnswer.pointsEarned = 0;
       }
     });
+
+    // Identify the fastest player who answered correctly
+    let fastest = null;
+    Object.values(gameState.players).forEach(p => {
+      if (p.currentAnswer && p.currentAnswer.pointsEarned > 0 && typeof p.currentAnswer.timeTaken === 'number') {
+        if (!fastest || p.currentAnswer.timeTaken < fastest.timeTaken) {
+          fastest = {
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar,
+            timeTaken: p.currentAnswer.timeTaken,
+            pointsEarned: p.currentAnswer.pointsEarned
+          };
+        }
+      }
+    });
+    gameState.fastestPlayer = fastest;
+  } else {
+    gameState.fastestPlayer = null;
   }
 
   broadcastFullState();
@@ -843,6 +903,7 @@ io.on('connection', (socket) => {
     stopTimer();
     gameState.currentQuestionIndex = 0;
     gameState.status = 'READING';
+    gameState.fastestPlayer = null;
 
     Object.values(gameState.players).forEach(p => {
       p.score = 0;
@@ -862,6 +923,7 @@ io.on('connection', (socket) => {
   socket.on('admin_start_voting', () => {
     if (gameState.status !== 'READING') return;
     gameState.status = 'QUESTION';
+    gameState.fastestPlayer = null;
 
     const currentQ = getCurrentQuestion();
     const qTimer = currentQ ? (currentQ.timer || 20) : 20;
@@ -879,6 +941,7 @@ io.on('connection', (socket) => {
     if (nextIdx < gameState.questions.length) {
       gameState.currentQuestionIndex = nextIdx;
       gameState.status = 'READING';
+      gameState.fastestPlayer = null;
 
       Object.values(gameState.players).forEach(p => {
         p.currentAnswer = null;
