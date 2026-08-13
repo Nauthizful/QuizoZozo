@@ -185,18 +185,30 @@ function normalizeQuestion(q, idx = 0) {
   };
 }
 
+function normalizeAvatar(a) {
+  if (!a || typeof a !== 'object') {
+    return { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' };
+  }
+  return {
+    head: Math.max(0, Math.min(5, parseInt(a.head, 10) || 0)),
+    eyes: Math.max(0, Math.min(5, parseInt(a.eyes, 10) || 0)),
+    mouth: Math.max(0, Math.min(5, parseInt(a.mouth, 10) || 0)),
+    color: (typeof a.color === 'string' && a.color.startsWith('#')) ? a.color : '#3B82F6'
+  };
+}
+
 // In-Memory Game State
 let gameState = {
-  status: 'LOBBY', // 'LOBBY' | 'QUESTION' | 'REVEAL' | 'LEADERBOARD' | 'GAME_OVER'
+  status: 'LOBBY', // 'LOBBY' | 'READING' | 'QUESTION' | 'REVEAL' | 'LEADERBOARD' | 'GAME_OVER'
   title: 'QuizoZozo en Direct !',
-  theme: 'quizz-moderne', // 'quizz-moderne' | 'geek-it' | 'mariage-automne' | 'windows-xp' | 'synthwave-arcade'
+  theme: 'quizz-moderne', // 'quizz-moderne' | 'geek-it' | 'mariage-automne' | 'windows-xp' | 'synthwave-arcade' | 'eclipse-etoiles'
   currentQuestionIndex: 0,
   timeRemaining: 20,
   totalQuestionTime: 20,
   isTimerPaused: false,
   questionStartTime: null,
   questions: defaultQuestions.map((q, idx) => normalizeQuestion(q, idx)),
-  players: {}, // guestId -> { id, name, score, isConnected, socketId, currentAnswer: { choices: [], timeTaken, pointsEarned } }
+  players: {}, // guestId -> { id, name, avatar, score, isConnected, socketId, currentAnswer: { choices: [], timeTaken, pointsEarned } }
   history: []
 };
 
@@ -219,6 +231,10 @@ function getNextQuestion() {
     return gameState.questions[nextIdx];
   }
   return null;
+}
+
+function isLastQuestion() {
+  return gameState.currentQuestionIndex >= gameState.questions.length - 1;
 }
 
 function getConnectedPlayersCount() {
@@ -258,6 +274,7 @@ function getLeaderboard(limit = 10) {
     .map(p => ({
       id: p.id,
       name: p.name,
+      avatar: p.avatar || { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' },
       score: p.score || 0,
       isConnected: p.isConnected,
       lastPoints: p.currentAnswer ? p.currentAnswer.pointsEarned : 0
@@ -307,15 +324,19 @@ function getGuestView(guestId) {
     totalQuestions: gameState.questions.length,
     timeRemaining: gameState.timeRemaining,
     totalQuestionTime: gameState.totalQuestionTime,
+    isLastQuestion: isLastQuestion(),
     player: player ? {
       id: player.id,
       name: player.name,
+      avatar: player.avatar || { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' },
       score: player.score,
       hasAnswered: !!(player.currentAnswer && player.currentAnswer.choices && player.currentAnswer.choices.length > 0),
       selectedChoices: player.currentAnswer ? (player.currentAnswer.choices || []) : []
     } : null,
     question: currentQ ? {
       id: currentQ.id,
+      prompt: currentQ.prompt,
+      image: currentQ.image,
       choices: currentQ.choices,
       isMultiple: currentQ.correctChoices.length > 1,
       timer: currentQ.timer
@@ -335,11 +356,13 @@ function getDisplayView() {
     timeRemaining: gameState.timeRemaining,
     totalQuestionTime: gameState.totalQuestionTime,
     isTimerPaused: gameState.isTimerPaused,
+    isLastQuestion: isLastQuestion(),
     connectedCount: getConnectedPlayersCount(),
     answeredCount: getAnsweredPlayersCount(),
     playersList: Object.values(gameState.players).map(p => ({
       id: p.id,
       name: p.name,
+      avatar: p.avatar || { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' },
       isConnected: p.isConnected,
       score: p.score
     })),
@@ -369,6 +392,7 @@ function getAdminView() {
     timeRemaining: gameState.timeRemaining,
     totalQuestionTime: gameState.totalQuestionTime,
     isTimerPaused: gameState.isTimerPaused,
+    isLastQuestion: isLastQuestion(),
     connectedCount: getConnectedPlayersCount(),
     answeredCount: getAnsweredPlayersCount(),
     question: currentQ ? {
@@ -394,6 +418,7 @@ function getAdminView() {
     allPlayers: Object.values(gameState.players).map(p => ({
       id: p.id,
       name: p.name,
+      avatar: p.avatar || { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' },
       score: p.score,
       isConnected: p.isConnected,
       hasAnswered: !!(p.currentAnswer && p.currentAnswer.choices && p.currentAnswer.choices.length > 0)
@@ -720,17 +745,20 @@ app.post('/api/quiz/sample', (req, res) => {
 
 io.on('connection', (socket) => {
 
-  // 1. Guest Registration
-  socket.on('register_guest', ({ guestId, name }) => {
+  // 1. Guest Registration with Custom Avatar
+  socket.on('register_guest', ({ guestId, name, avatar }) => {
     if (!guestId) return;
 
     socket.guestId = guestId;
     socket.join('guests');
 
+    const cleanAvatar = normalizeAvatar(avatar);
+
     if (!gameState.players[guestId]) {
       gameState.players[guestId] = {
         id: guestId,
         name: (name || 'Joueur').trim().substring(0, 25),
+        avatar: cleanAvatar,
         score: 0,
         isConnected: true,
         socketId: socket.id,
@@ -739,6 +767,9 @@ io.on('connection', (socket) => {
     } else {
       gameState.players[guestId].isConnected = true;
       gameState.players[guestId].socketId = socket.id;
+      if (avatar) {
+        gameState.players[guestId].avatar = cleanAvatar;
+      }
       if (name && name.trim()) {
         gameState.players[guestId].name = name.trim().substring(0, 25);
       }
@@ -761,7 +792,7 @@ io.on('connection', (socket) => {
     socket.emit('admin_state', getAdminView());
   });
 
-  // 4. Guest Answer Selection (Continuous & Realtime update without locking)
+  // 4. Guest Answer Selection (Active only during 'QUESTION' phase)
   socket.on('submit_answer', ({ guestId, choices, choice }) => {
     if (gameState.status !== 'QUESTION') return;
     const player = gameState.players[guestId];
@@ -804,11 +835,14 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 5. Admin Controls
+  // 5. Admin Controls (2-Phase Workflow: Reading ➔ Voting)
+
+  // Start Quiz (Phase 1: Question 1 Reading)
   socket.on('admin_start_game', () => {
     if (gameState.questions.length === 0) return;
+    stopTimer();
     gameState.currentQuestionIndex = 0;
-    gameState.status = 'QUESTION';
+    gameState.status = 'READING';
 
     Object.values(gameState.players).forEach(p => {
       p.score = 0;
@@ -819,16 +853,32 @@ io.on('connection', (socket) => {
     const qTimer = currentQ ? (currentQ.timer || 20) : 20;
     gameState.timeRemaining = qTimer;
     gameState.totalQuestionTime = qTimer;
+    gameState.isTimerPaused = false;
+
+    broadcastFullState();
+  });
+
+  // Phase 2: Launch Voting & Countdown
+  socket.on('admin_start_voting', () => {
+    if (gameState.status !== 'READING') return;
+    gameState.status = 'QUESTION';
+
+    const currentQ = getCurrentQuestion();
+    const qTimer = currentQ ? (currentQ.timer || 20) : 20;
+    gameState.timeRemaining = qTimer;
+    gameState.totalQuestionTime = qTimer;
 
     startQuestionTimer();
     broadcastFullState();
   });
 
+  // Next Question (Phase 1: Reading of question N+1)
   socket.on('admin_next_question', () => {
+    stopTimer();
     const nextIdx = gameState.currentQuestionIndex + 1;
     if (nextIdx < gameState.questions.length) {
       gameState.currentQuestionIndex = nextIdx;
-      gameState.status = 'QUESTION';
+      gameState.status = 'READING';
 
       Object.values(gameState.players).forEach(p => {
         p.currentAnswer = null;
@@ -838,23 +888,28 @@ io.on('connection', (socket) => {
       const qTimer = currentQ ? (currentQ.timer || 20) : 20;
       gameState.timeRemaining = qTimer;
       gameState.totalQuestionTime = qTimer;
+      gameState.isTimerPaused = false;
 
-      startQuestionTimer();
       broadcastFullState();
     } else {
-      stopTimer();
       gameState.status = 'GAME_OVER';
       broadcastFullState();
     }
   });
 
+  // Reveal Answer (from Timer or Admin)
   socket.on('admin_reveal_answer', () => {
     handleReveal();
   });
 
+  // Show Leaderboard (or Final Podium if last question)
   socket.on('admin_show_leaderboard', () => {
     stopTimer();
-    gameState.status = 'LEADERBOARD';
+    if (isLastQuestion()) {
+      gameState.status = 'GAME_OVER';
+    } else {
+      gameState.status = 'LEADERBOARD';
+    }
     broadcastFullState();
   });
 
@@ -908,7 +963,7 @@ io.on('connection', (socket) => {
     broadcastFullState();
   });
 
-  // 6. Delete / Wipe Quiz (PHYSICALLY DELETES ALL FILES IN /UPLOADS/)
+  // 7. Delete / Wipe Quiz (PHYSICALLY DELETES ALL FILES IN /UPLOADS/)
   socket.on('admin_delete_quiz', async () => {
     stopTimer();
 
@@ -933,7 +988,7 @@ io.on('connection', (socket) => {
     // 2. Reset Game State in memory
     gameState = {
       status: 'LOBBY',
-      title: 'Quiz Réinitialisé',
+      title: 'QuizoZozo en Direct !',
       theme: 'quizz-moderne',
       currentQuestionIndex: 0,
       timeRemaining: 20,

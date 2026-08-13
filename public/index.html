@@ -3,84 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>QuizoZozo - Joueur</title>
+  <title>QuizoZozo - Espace Joueur</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Cinzel:wght@700&family=Fira+Code:wght@500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <style>
+    /* Specific mobile answer layout */
     .guest-btn-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 1rem;
-      margin-bottom: 1.25rem;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      width: 100%;
       flex: 1;
     }
-    @media (max-width: 500px) {
-      .guest-btn-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
-      .guest-choice-btn {
-        min-height: 80px;
-      }
-    }
     .guest-choice-btn {
+      border: 3px solid transparent;
+      border-radius: var(--radius-btn);
+      padding: 1rem 1.25rem;
+      color: #FFF;
+      font-weight: 800;
+      font-size: 1.25rem;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 1.4rem 1.2rem;
-      border-radius: var(--radius-btn);
-      border: 3px solid transparent;
-      font-family: inherit;
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: #FFF;
-      cursor: pointer;
-      text-align: center;
-      transition: transform 0.1s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      min-height: 65px;
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, border-color 0.15s ease;
       touch-action: manipulation;
-      position: relative;
-      word-break: break-word;
+      text-align: center;
+      width: 100%;
     }
     .guest-choice-btn:active {
       transform: scale(0.96);
     }
+    .guest-choice-btn.is-selected {
+      border-color: #FFFFFF !important;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3) !important;
+      transform: scale(1.02);
+    }
     .choice-selection-indicator {
-      text-align: center;
-      padding: 0.85rem 1.25rem;
+      margin-top: 0.75rem;
+      padding: 0.6rem;
       border-radius: var(--radius-btn);
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.35);
       border: 1px solid var(--border-glass);
-      margin-top: auto;
+      text-align: center;
+      font-size: 0.9rem;
       font-weight: 700;
-      font-size: 0.95rem;
     }
     .result-icon {
-      font-size: 4.5rem;
-      margin-bottom: 1rem;
-      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-size: 4rem;
+      margin-bottom: 0.75rem;
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
-    .display-reminder-box {
+    .question-card-mobile {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-card);
+      padding: 1rem;
+      margin-bottom: 0.75rem;
       text-align: center;
-      padding: 0.6rem 1rem;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px dashed var(--border-glass);
-      border-radius: var(--radius-btn);
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
     }
   </style>
 </head>
 <body>
 
-  <div class="guest-wrapper">
-    <!-- Header Player Info Bar -->
-    <header class="glass-card mb-3 flex-row justify-between items-center" style="padding: 0.75rem 1.2rem;">
-      <div class="flex-row items-center gap-2">
-        <span style="font-size: 1.4rem;">⚡</span>
+  <div class="app-container">
+    <!-- Header with Name, Score & Custom Avatar -->
+    <header class="app-header">
+      <div class="flex-row items-center gap-3">
+        <div id="guest-header-avatar" class="user-mini-avatar"></div>
         <div>
-          <h2 id="guest-header-name" style="font-size: 1.1rem;">Joueur</h2>
+          <h2 id="guest-header-name" style="font-size: 1.05rem;">Joueur</h2>
           <span class="badge badge-info" id="guest-game-status">Connecté</span>
         </div>
       </div>
@@ -93,15 +88,50 @@
     <!-- MAIN VIEW CONTAINER (Dynamic screens) -->
     <main id="guest-main-content" class="flex-1 flex-col justify-center">
 
-      <!-- 1. JOIN MODAL (if no guestId/name) -->
+      <!-- 1. JOIN & AVATAR BUILDER VIEW -->
       <div id="view-join" class="glass-card animate-fade-in text-center">
-        <div style="font-size: 3.5rem; margin-bottom: 1rem;">🎯</div>
-        <h1 style="font-size: 1.8rem; margin-bottom: 0.5rem;">Rejoindre QuizoZozo</h1>
-        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Entrez votre prénom pour participer en direct</p>
+        <h1 style="font-size: 1.8rem; margin-bottom: 0.35rem;">Rejoindre QuizoZozo</h1>
+        <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.95rem;">Créez votre avatar et entrez votre prénom</p>
         
+        <!-- AVATAR CUSTOMIZER -->
+        <div class="avatar-customizer">
+          <!-- Preview Circle + Dice Randomizer -->
+          <div class="avatar-preview-container">
+            <div id="avatar-preview-target"></div>
+            <button type="button" id="btn-avatar-random" class="btn-dice-random" title="Avatar aléatoire">🎲</button>
+          </div>
+
+          <!-- Controls Rows -->
+          <div class="avatar-controls-grid">
+            <!-- Head Selector -->
+            <div class="avatar-ctrl-row">
+              <button type="button" class="avatar-arrow-btn" id="btn-head-prev">◀</button>
+              <span class="avatar-ctrl-label">👤 Forme de tête</span>
+              <button type="button" class="avatar-arrow-btn" id="btn-head-next">▶</button>
+            </div>
+
+            <!-- Eyes Selector -->
+            <div class="avatar-ctrl-row">
+              <button type="button" class="avatar-arrow-btn" id="btn-eyes-prev">◀</button>
+              <span class="avatar-ctrl-label">👀 Expression des yeux</span>
+              <button type="button" class="avatar-arrow-btn" id="btn-eyes-next">▶</button>
+            </div>
+
+            <!-- Mouth Selector -->
+            <div class="avatar-ctrl-row">
+              <button type="button" class="avatar-arrow-btn" id="btn-mouth-prev">◀</button>
+              <span class="avatar-ctrl-label">👄 Expression bouche</span>
+              <button type="button" class="avatar-arrow-btn" id="btn-mouth-next">▶</button>
+            </div>
+
+            <!-- Color Swatches (8 colors) -->
+            <div class="avatar-swatches-row" id="avatar-color-swatches"></div>
+          </div>
+        </div>
+
         <form id="join-form">
           <div class="form-group">
-            <input type="text" id="player-name-input" class="form-control text-center" style="font-size: 1.3rem; font-weight: 700;" placeholder="Votre prénom..." required maxlength="20" autofocus autocomplete="off">
+            <input type="text" id="player-name-input" class="form-control text-center" style="font-size: 1.25rem; font-weight: 700;" placeholder="Votre prénom..." required maxlength="20" autofocus autocomplete="off">
           </div>
           <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
             C'est parti ! 🚀
@@ -111,7 +141,7 @@
 
       <!-- 2. LOBBY VIEW -->
       <div id="view-lobby" class="glass-card animate-fade-in text-center hidden">
-        <div style="font-size: 4rem; margin-bottom: 1rem; animation: float-avatar 2s ease-in-out infinite;">🎮</div>
+        <div id="lobby-avatar-container" style="display: flex; justify-content: center; margin-bottom: 1rem;"></div>
         <h2 style="font-size: 1.6rem; margin-bottom: 0.5rem;">Bienvenue <span id="lobby-player-name" style="color: var(--text-accent);"></span> !</h2>
         <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Vous êtes bien connecté(e) à la session QuizoZozo.</p>
         
@@ -120,10 +150,10 @@
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.4rem;">Gardez cet écran ouvert, la partie va démarrer automatiquement !</p>
         </div>
 
-        <button id="btn-change-name" class="btn btn-secondary btn-sm">Modifier mon prénom</button>
+        <button id="btn-change-name" class="btn btn-secondary btn-sm">Modifier mon profil & avatar</button>
       </div>
 
-      <!-- 3. ACTIVE QUESTION VIEW (ANSWERS ONLY, NO QUESTION TEXT OR IMAGE) -->
+      <!-- 3. ACTIVE QUESTION VIEW (QUESTION TEXT, IMAGE & CHOICES) -->
       <div id="view-question" class="flex-1 flex-col hidden animate-fade-in">
         <!-- Question Progress & Timer Header -->
         <div class="glass-card mb-2 flex-row justify-between items-center" style="padding: 0.75rem 1rem;">
@@ -133,16 +163,30 @@
           </div>
           <div class="flex-row items-center gap-2">
             <span style="font-size: 0.85rem; color: var(--text-secondary);">TEMPS :</span>
-            <span id="guest-timer-text" style="font-size: 1.35rem; font-weight: 800;">20s</span>
+            <span id="guest-timer-text" style="font-size: 1.35rem; font-weight: 800;">--</span>
           </div>
         </div>
 
-        <!-- Reminder to look at main screen -->
-        <div class="display-reminder-box">
-          📺 Regardez le Grand Écran pour l'énoncé & l'image !
+        <!-- Question Prompt & Image (Mobile Display) -->
+        <div class="question-card-mobile">
+          <div id="guest-image-container" class="hidden">
+            <img id="guest-question-image" class="question-mobile-image" src="" alt="Illustration question">
+          </div>
+          <h3 id="guest-question-prompt" style="font-size: 1.15rem; font-weight: 700; line-height: 1.35; color: #FFF;">
+            Énoncé de la question
+          </h3>
         </div>
 
-        <!-- Dynamic Choice Buttons (3 to 6 colors + text only) -->
+        <!-- PHASE 1: Reading Phase Banner -->
+        <div id="guest-reading-banner" class="reading-phase-box hidden">
+          <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">👀</div>
+          <div style="font-weight: 800; font-size: 1.1rem; color: #38BDF8;">Phase de lecture</div>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+            Prenez connaissance de la question. Les choix vont s'activer au lancement du vote !
+          </p>
+        </div>
+
+        <!-- Dynamic Choice Buttons (3 to 6 colors + text) -->
         <div class="guest-btn-grid" id="guest-choices-container"></div>
 
         <!-- Live Selection Status Message -->
@@ -163,7 +207,7 @@
           <div id="result-your-choice-text" style="font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.5rem;">Votre vote : --</div>
         </div>
 
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Regardez le Grand Écran pour la suite...</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Regardez le Grand Écran pour le classement !</p>
       </div>
 
       <!-- 5. FINAL GAME OVER VIEW -->
@@ -201,6 +245,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/confetti.js"></script>
+  <script src="/js/avatar.js"></script>
   <script src="/js/guest.js"></script>
 </body>
 </html>

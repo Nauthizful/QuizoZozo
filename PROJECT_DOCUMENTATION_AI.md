@@ -155,14 +155,15 @@ $$\text{Points} = \text{Math.round}\left(\text{PointsMaxVitesse} \times \text{Fr
 ### Événements Client $\rightarrow$ Serveur :
 | Événement | Émetteur | Payload | Action Serveur |
 | :--- | :--- | :--- | :--- |
-| `register_guest` | Joueur | `{ guestId: string, name: string }` | Enregistre/reconnecte le joueur, l'ajoute à la room `guests` |
+| `register_guest` | Joueur | `{ guestId: string, name: string, avatar: object }` | Enregistre/reconnecte le joueur avec son avatar SVG |
 | `register_display`| Grand Écran | *aucun* | Ajoute la socket à la room `display` |
 | `register_admin`  | Régie Admin | *aucun* | Ajoute la socket à la room `admin` |
-| `submit_answer`   | Joueur | `{ guestId: string, choices: string[] }` | Met à jour en continu les choix du joueur sans verrouillage |
-| `admin_start_game`| Régie Admin | *aucun* | Initialise les scores à 0 et lance la Question 1 |
+| `submit_answer`   | Joueur | `{ guestId: string, choices: string[] }` | Met à jour en continu les choix du joueur pendant `QUESTION` |
+| `admin_start_game`| Régie Admin | *aucun* | Initialise les scores et passe en `READING` (Phase 1) |
+| `admin_start_voting`| Régie Admin | *aucun* | Lance le vote et le chronomètre (`QUESTION` - Phase 2) |
 | `admin_reveal_answer` | Régie Admin | *aucun* | Stoppe le timer, calcule les scores et passe en `REVEAL` |
-| `admin_show_leaderboard` | Régie Admin | *aucun* | Passe en état `LEADERBOARD` |
-| `admin_next_question` | Régie Admin | *aucun* | Passe à la question $N+1$ ou `GAME_OVER` |
+| `admin_show_leaderboard` | Régie Admin | *aucun* | Passe en `LEADERBOARD` (ou `GAME_OVER` / Podium final si dernière question) |
+| `admin_next_question` | Régie Admin | *aucun* | Passe à la question $N+1$ en phase `READING` |
 | `admin_pause_timer` | Régie Admin | *aucun* | Met en pause le chronomètre |
 | `admin_resume_timer`| Régie Admin | *aucun* | Reprend le chronomètre |
 | `admin_add_time`  | Régie Admin | `{ seconds: number }` | Ajoute +10s au chronomètre en cours |
@@ -171,6 +172,23 @@ $$\text{Points} = \text{Math.round}\left(\text{PointsMaxVitesse} \times \text{Fr
 | `admin_delete_quiz`| Régie Admin | *aucun* | Vide `gameState` et supprime physiquement les fichiers dans `/uploads/` |
 
 ---
+
+## 6bis. MACHINE D'ÉTAT & CYCLE STRICT DE LA PARTIE
+
+Le flux d'une session QuizoZozo suit un enchaînement strict sans raccourci :
+```text
+LOBBY
+  ↓ (admin_start_game)
+READING (Phase 1: Lecture question & image, réponses masquées, chrono en pause)
+  ↓ (admin_start_voting)
+QUESTION (Phase 2: Vote ouvert sur mobile, réponses affichées sur écran, chrono actif)
+  ↓ (fin du chrono ou admin_reveal_answer)
+REVEAL (Révélation des bonnes réponses et histogramme)
+  ↓ (admin_show_leaderboard - SEULE ACTION POSSIBLE)
+LEADERBOARD (Podium Top 3 & classement avec Avatars SVG)
+  ↓ (admin_next_question)
+READING (Question suivante) ... ou GAME_OVER (Podium Final + Confettis si dernière question)
+```
 
 ## 7. SYSTÈME DES 6 THÈMES GRAPHIQUES DYNAMIQUES
 

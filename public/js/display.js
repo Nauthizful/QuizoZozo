@@ -1,4 +1,4 @@
-// Display / Grand Screen Client Logic (Theme-aware, Dynamic 3-6 Choices & Audio Engine)
+// Display / Grand Screen Client Logic (Theme-aware, 2-Phase Reading/Voting, Custom Avatars & Audio Engine)
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const displayQuestionPrompt = document.getElementById('display-question-prompt');
   const displayImageContainer = document.getElementById('display-image-container');
   const displayQuestionImage = document.getElementById('display-question-image');
+  const displayReadingBanner = document.getElementById('display-reading-banner');
   const displayChoicesGrid = document.getElementById('display-choices-grid');
 
   const histogramSection = document.getElementById('display-histogram-section');
@@ -41,12 +42,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Podium Elements
   const leaderboardTitle = document.getElementById('leaderboard-title');
+  const podiumAvatar1 = document.getElementById('podium-avatar-1');
   const podiumName1 = document.getElementById('podium-name-1');
   const podiumScore1 = document.getElementById('podium-score-1');
+
+  const podiumAvatar2 = document.getElementById('podium-avatar-2');
   const podiumName2 = document.getElementById('podium-name-2');
   const podiumScore2 = document.getElementById('podium-score-2');
+
+  const podiumAvatar3 = document.getElementById('podium-avatar-3');
   const podiumName3 = document.getElementById('podium-name-3');
   const podiumScore3 = document.getElementById('podium-score-3');
+
   const leaderboardExtraList = document.getElementById('leaderboard-extra-list');
 
   // Audio Engine instances
@@ -97,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         audioText.textContent = 'Son activé';
         btnAudioToggle.classList.remove('btn-secondary');
         btnAudioToggle.classList.add('btn-primary');
-        // Test/warm-up playback to unlock AudioContext
         try {
           const testAudio = audioFiles.reveal;
           testAudio.volume = 0.01;
@@ -175,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Audio triggers on state change
     if (previousStatus !== state.status) {
-      if (state.status === 'QUESTION') {
+      if (state.status === 'QUESTION' || state.status === 'READING') {
         stopAllSounds();
         lastPlayedCountdown = null;
       } else if (state.status === 'REVEAL') {
@@ -196,13 +202,11 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('timer_tick', ({ timeRemaining, totalQuestionTime }) => {
     updateTimerVisual(timeRemaining, totalQuestionTime);
 
-    // Play 5 seconds countdown sound once when hitting exactly 5s
     if (timeRemaining === 5 && lastPlayedCountdown !== 5) {
       lastPlayedCountdown = 5;
       playSound('countdown');
     }
 
-    // Play drumroll for suspense when 2 seconds remain
     if (timeRemaining === 2 && lastPlayedCountdown !== 2) {
       lastPlayedCountdown = 2;
       playSound('drumroll');
@@ -221,6 +225,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateTimerVisual(timeRemaining, totalTime = 20) {
     if (!displayTimerText || !displayTimerCircle) return;
+
+    if (typeof timeRemaining !== 'number') {
+      displayTimerText.textContent = '--';
+      displayTimerCircle.style.strokeDashoffset = 0;
+      return;
+    }
 
     displayTimerText.textContent = timeRemaining;
     const perimeter = 251.2;
@@ -251,25 +261,60 @@ document.addEventListener('DOMContentLoaded', () => {
         lobbyPlayersCount.textContent = state.playersList.length;
 
         if (state.playersList.length === 0) {
-          lobbyPlayersGrid.innerHTML = `<span style="color: var(--text-muted); font-size: 1.1rem;">En attente des premiers joueurs...</span>`;
+          lobbyPlayersGrid.innerHTML = `<span style="color: var(--text-muted); font-size: 1.1rem; grid-column: 1 / -1;">En attente des premiers joueurs...</span>`;
         } else {
-          lobbyPlayersGrid.innerHTML = state.playersList.map(p => `
-            <div class="player-tag">
-              <span>👤</span>
-              <span>${escapeHtml(p.name)}</span>
-            </div>
-          `).join('');
+          lobbyPlayersGrid.innerHTML = state.playersList.map(p => {
+            const avatarSvg = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(p.avatar, 64) : '👤';
+            return `
+              <div class="lobby-player-card">
+                ${avatarSvg}
+                <span class="lobby-player-name">${escapeHtml(p.name)}</span>
+              </div>
+            `;
+          }).join('');
         }
         showSection(viewLobby);
         break;
 
+      case 'READING':
+        // PHASE 1: Reading question (Question + Image visible, choices hidden, timer paused)
+        displayAnsweredBadge.classList.add('hidden');
+        displayQuestionNumber.textContent = `Question ${state.currentQuestionIndex + 1} / ${state.totalQuestions}`;
+        histogramSection.classList.add('hidden');
+        displayChoicesGrid.classList.add('hidden');
+        displayReadingBanner.classList.remove('hidden');
+
+        if (state.question) {
+          displayQuestionPrompt.textContent = state.question.prompt;
+
+          if (state.question.isMultiple) {
+            displayMultipleBadge.classList.remove('hidden');
+          } else {
+            displayMultipleBadge.classList.add('hidden');
+          }
+
+          if (state.question.image) {
+            displayQuestionImage.src = state.question.image;
+            displayImageContainer.classList.remove('hidden');
+          } else {
+            displayImageContainer.classList.add('hidden');
+          }
+        }
+
+        updateTimerVisual('--', state.totalQuestionTime);
+        showSection(viewQuestion);
+        break;
+
       case 'QUESTION':
+        // PHASE 2: Voting active (Question + Choices visible + Countdown)
         displayAnsweredBadge.classList.remove('hidden');
         displayAnsweredCount.textContent = state.answeredCount || 0;
         displayTotalCount.textContent = state.connectedCount || 0;
 
         displayQuestionNumber.textContent = `Question ${state.currentQuestionIndex + 1} / ${state.totalQuestions}`;
         histogramSection.classList.add('hidden');
+        displayReadingBanner.classList.add('hidden');
+        displayChoicesGrid.classList.remove('hidden');
 
         if (state.question) {
           displayQuestionPrompt.textContent = state.question.prompt;
@@ -296,6 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'REVEAL':
         displayAnsweredBadge.classList.add('hidden');
+        displayReadingBanner.classList.add('hidden');
+        displayChoicesGrid.classList.remove('hidden');
         histogramSection.classList.remove('hidden');
 
         // Highlight correct choices and dim others
@@ -318,8 +365,10 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'LEADERBOARD':
       case 'GAME_OVER':
         displayAnsweredBadge.classList.add('hidden');
-        if (state.status === 'GAME_OVER') {
-          leaderboardTitle.textContent = '🎉 PODIUM FINAL DE LA PARTIE !';
+        const isFinal = (state.status === 'GAME_OVER');
+
+        if (isFinal) {
+          leaderboardTitle.textContent = '🏆 PODIUM FINAL';
           if (window.launchConfetti) window.launchConfetti(5000);
         } else {
           leaderboardTitle.textContent = '🏆 Classement Provisoire (Top 5)';
@@ -328,29 +377,54 @@ document.addEventListener('DOMContentLoaded', () => {
         const top = state.leaderboard || [];
         
         // 1st
-        podiumName1.textContent = top[0] ? top[0].name : '--';
-        podiumScore1.textContent = top[0] ? `${top[0].score} pts` : '0 pts';
+        if (top[0]) {
+          podiumAvatar1.innerHTML = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(top[0].avatar, 80) : '👑';
+          podiumName1.textContent = top[0].name;
+          podiumScore1.textContent = `${top[0].score} pts`;
+        } else {
+          podiumAvatar1.innerHTML = '👑';
+          podiumName1.textContent = '--';
+          podiumScore1.textContent = '0 pts';
+        }
 
         // 2nd
-        podiumName2.textContent = top[1] ? top[1].name : '--';
-        podiumScore2.textContent = top[1] ? `${top[1].score} pts` : '0 pts';
+        if (top[1]) {
+          podiumAvatar2.innerHTML = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(top[1].avatar, 70) : '🥈';
+          podiumName2.textContent = top[1].name;
+          podiumScore2.textContent = `${top[1].score} pts`;
+        } else {
+          podiumAvatar2.innerHTML = '🥈';
+          podiumName2.textContent = '--';
+          podiumScore2.textContent = '0 pts';
+        }
 
         // 3rd
-        podiumName3.textContent = top[2] ? top[2].name : '--';
-        podiumScore3.textContent = top[2] ? `${top[2].score} pts` : '0 pts';
+        if (top[2]) {
+          podiumAvatar3.innerHTML = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(top[2].avatar, 64) : '🥉';
+          podiumName3.textContent = top[2].name;
+          podiumScore3.textContent = `${top[2].score} pts`;
+        } else {
+          podiumAvatar3.innerHTML = '🥉';
+          podiumName3.textContent = '--';
+          podiumScore3.textContent = '0 pts';
+        }
 
         // 4th & 5th
         const extras = top.slice(3, 5);
         if (extras.length > 0) {
-          leaderboardExtraList.innerHTML = extras.map((p, idx) => `
-            <div class="leaderboard-item animate-slide-up">
-              <div class="flex-row items-center gap-4">
-                <div class="leaderboard-rank">${idx + 4}</div>
-                <div>${escapeHtml(p.name)}</div>
+          leaderboardExtraList.innerHTML = extras.map((p, idx) => {
+            const avatarMini = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(p.avatar, 36) : '👤';
+            return `
+              <div class="leaderboard-item animate-slide-up">
+                <div class="flex-row items-center gap-3">
+                  <div class="leaderboard-rank">${idx + 4}</div>
+                  <div class="user-mini-avatar">${avatarMini}</div>
+                  <div style="font-weight: 700;">${escapeHtml(p.name)}</div>
+                </div>
+                <div style="color: var(--text-accent); font-weight: 800;">${p.score} pts</div>
               </div>
-              <div style="color: var(--text-accent); font-weight: 800;">${p.score} pts</div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
         } else {
           leaderboardExtraList.innerHTML = '';
         }
@@ -360,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Render choices grid for 3 to 6 choices (Text and colors only, no shape symbols)
+  // Render choices grid for 3 to 6 choices (Text and colors only, centered)
   function renderChoicesGrid(choices) {
     displayChoicesGrid.innerHTML = '';
     const count = choices.length;

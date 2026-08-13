@@ -1,4 +1,4 @@
-// Guest Client Logic (Answer Text & Colors, Wake Lock API & Kick Handling)
+// Guest Client Logic (Question & Image on Mobile, 2-Phase Reading/Voting, Custom Avatars & WakeLock)
 document.addEventListener('DOMContentLoaded', () => {
   let socket = io();
 
@@ -13,16 +13,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const joinForm = document.getElementById('join-form');
   const playerNameInput = document.getElementById('player-name-input');
   const lobbyPlayerName = document.getElementById('lobby-player-name');
+  const lobbyAvatarContainer = document.getElementById('lobby-avatar-container');
   const btnChangeName = document.getElementById('btn-change-name');
   const btnRejoinAfterKick = document.getElementById('btn-rejoin-after-kick');
 
   const guestHeaderName = document.getElementById('guest-header-name');
   const guestHeaderScore = document.getElementById('guest-header-score');
+  const guestHeaderAvatar = document.getElementById('guest-header-avatar');
   const guestGameStatus = document.getElementById('guest-game-status');
 
+  // Avatar Builder Elements
+  const avatarPreviewTarget = document.getElementById('avatar-preview-target');
+  const btnAvatarRandom = document.getElementById('btn-avatar-random');
+  const btnHeadPrev = document.getElementById('btn-head-prev');
+  const btnHeadNext = document.getElementById('btn-head-next');
+  const btnEyesPrev = document.getElementById('btn-eyes-prev');
+  const btnEyesNext = document.getElementById('btn-eyes-next');
+  const btnMouthPrev = document.getElementById('btn-mouth-prev');
+  const btnMouthNext = document.getElementById('btn-mouth-next');
+  const avatarColorSwatches = document.getElementById('avatar-color-swatches');
+
+  // Question Elements
   const questionBadgeNum = document.getElementById('question-badge-num');
   const multipleBadge = document.getElementById('multiple-badge');
   const guestTimerText = document.getElementById('guest-timer-text');
+  const guestImageContainer = document.getElementById('guest-image-container');
+  const guestQuestionImage = document.getElementById('guest-question-image');
+  const guestQuestionPrompt = document.getElementById('guest-question-prompt');
+  const guestReadingBanner = document.getElementById('guest-reading-banner');
   const guestChoicesContainer = document.getElementById('guest-choices-container');
   const selectionStatusBox = document.getElementById('selection-status-box');
 
@@ -46,6 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Local Storage State
   let guestId = localStorage.getItem('quiz_guest_id');
   let playerName = localStorage.getItem('quiz_guest_name');
+  let rawAvatar = localStorage.getItem('quiz_guest_avatar');
+  let currentAvatar = rawAvatar ? JSON.parse(rawAvatar) : (window.QuizoAvatar ? window.QuizoAvatar.getRandom() : { head: 0, eyes: 0, mouth: 0, color: '#3B82F6' });
+  
   let selectedChoices = [];
   let currentServerState = null;
   let isKicked = false;
@@ -55,6 +76,107 @@ document.addEventListener('DOMContentLoaded', () => {
     guestId = 'guest_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now();
     localStorage.setItem('quiz_guest_id', guestId);
   }
+
+  // ==========================================
+  // AVATAR BUILDER LOGIC
+  // ==========================================
+  function updateAvatarPreview() {
+    if (!window.QuizoAvatar) return;
+    currentAvatar = window.QuizoAvatar.normalize(currentAvatar);
+    localStorage.setItem('quiz_guest_avatar', JSON.stringify(currentAvatar));
+
+    // Update Join Preview
+    if (avatarPreviewTarget) {
+      avatarPreviewTarget.innerHTML = window.QuizoAvatar.renderSvg(currentAvatar, 90);
+    }
+    // Update Header Avatar
+    if (guestHeaderAvatar) {
+      guestHeaderAvatar.innerHTML = window.QuizoAvatar.renderSvg(currentAvatar, 36);
+    }
+    // Update Lobby Avatar
+    if (lobbyAvatarContainer) {
+      lobbyAvatarContainer.innerHTML = window.QuizoAvatar.renderSvg(currentAvatar, 90, 'animate-pop');
+    }
+
+    // Update color swatches active state
+    if (avatarColorSwatches) {
+      document.querySelectorAll('.avatar-color-swatch').forEach(sw => {
+        if (sw.dataset.color.toLowerCase() === currentAvatar.color.toLowerCase()) {
+          sw.classList.add('active');
+        } else {
+          sw.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  function initAvatarSwatches() {
+    if (!avatarColorSwatches || !window.QuizoAvatar) return;
+    avatarColorSwatches.innerHTML = '';
+    window.QuizoAvatar.PALETTE.forEach(col => {
+      const sw = document.createElement('div');
+      sw.className = 'avatar-color-swatch';
+      sw.style.backgroundColor = col;
+      sw.dataset.color = col;
+      sw.addEventListener('click', () => {
+        currentAvatar.color = col;
+        updateAvatarPreview();
+      });
+      avatarColorSwatches.appendChild(sw);
+    });
+  }
+
+  // Avatar Navigation Listeners
+  if (btnAvatarRandom) {
+    btnAvatarRandom.addEventListener('click', () => {
+      if (window.QuizoAvatar) {
+        currentAvatar = window.QuizoAvatar.getRandom();
+        updateAvatarPreview();
+      }
+    });
+  }
+
+  if (btnHeadPrev && btnHeadNext) {
+    btnHeadPrev.addEventListener('click', () => {
+      const max = window.QuizoAvatar.TOTAL_HEADS;
+      currentAvatar.head = (currentAvatar.head - 1 + max) % max;
+      updateAvatarPreview();
+    });
+    btnHeadNext.addEventListener('click', () => {
+      const max = window.QuizoAvatar.TOTAL_HEADS;
+      currentAvatar.head = (currentAvatar.head + 1) % max;
+      updateAvatarPreview();
+    });
+  }
+
+  if (btnEyesPrev && btnEyesNext) {
+    btnEyesPrev.addEventListener('click', () => {
+      const max = window.QuizoAvatar.TOTAL_EYES;
+      currentAvatar.eyes = (currentAvatar.eyes - 1 + max) % max;
+      updateAvatarPreview();
+    });
+    btnEyesNext.addEventListener('click', () => {
+      const max = window.QuizoAvatar.TOTAL_EYES;
+      currentAvatar.eyes = (currentAvatar.eyes + 1) % max;
+      updateAvatarPreview();
+    });
+  }
+
+  if (btnMouthPrev && btnMouthNext) {
+    btnMouthPrev.addEventListener('click', () => {
+      const max = window.QuizoAvatar.TOTAL_MOUTHS;
+      currentAvatar.mouth = (currentAvatar.mouth - 1 + max) % max;
+      updateAvatarPreview();
+    });
+    btnMouthNext.addEventListener('click', () => {
+      const max = window.QuizoAvatar.TOTAL_MOUTHS;
+      currentAvatar.mouth = (currentAvatar.mouth + 1) % max;
+      updateAvatarPreview();
+    });
+  }
+
+  initAvatarSwatches();
+  updateAvatarPreview();
 
   // ==========================================
   // WAKE LOCK API (Anti-veille écran smartphone)
@@ -78,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Auto re-acquire wake lock on visibility change
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible' && playerName && !isKicked) {
       await requestWakeLock();
@@ -109,7 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (playerName && playerName.trim()) {
       guestHeaderName.textContent = playerName;
       lobbyPlayerName.textContent = playerName;
-      socket.emit('register_guest', { guestId, name: playerName });
+      updateAvatarPreview();
+      socket.emit('register_guest', { guestId, name: playerName, avatar: currentAvatar });
       requestWakeLock();
     } else {
       showView(viewJoin);
@@ -124,22 +246,23 @@ document.addEventListener('DOMContentLoaded', () => {
       playerName = enteredName;
       isKicked = false;
       localStorage.setItem('quiz_guest_name', playerName);
+      localStorage.setItem('quiz_guest_avatar', JSON.stringify(currentAvatar));
       guestHeaderName.textContent = playerName;
       lobbyPlayerName.textContent = playerName;
+      updateAvatarPreview();
+
       if (!socket.connected) {
         socket.connect();
       }
-      socket.emit('register_guest', { guestId, name: playerName });
+      socket.emit('register_guest', { guestId, name: playerName, avatar: currentAvatar });
       requestWakeLock();
       showView(viewLobby);
     }
   });
 
-  // Change Name Button
+  // Change Name & Profile Button
   btnChangeName.addEventListener('click', () => {
-    localStorage.removeItem('quiz_guest_name');
-    playerName = null;
-    playerNameInput.value = '';
+    playerNameInput.value = playerName || '';
     showView(viewJoin);
   });
 
@@ -171,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   socket.on('timer_tick', ({ timeRemaining }) => {
     if (isKicked) return;
-    if (guestTimerText) {
+    if (guestTimerText && currentServerState && currentServerState.status === 'QUESTION') {
       guestTimerText.textContent = `${timeRemaining}s`;
       if (timeRemaining <= 5) {
         guestTimerText.style.color = '#EF4444';
@@ -186,13 +309,11 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('[MODERATION] Vous avez été exclu :', message);
     isKicked = true;
 
-    // Release wake lock
     if (wakeLockSentinel) {
       try { wakeLockSentinel.release(); } catch (e) {}
       wakeLockSentinel = null;
     }
 
-    // Clear local storage data
     localStorage.removeItem('quiz_guest_id');
     localStorage.removeItem('quiz_guest_name');
     playerName = null;
@@ -201,8 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
     guestGameStatus.className = 'badge badge-danger';
 
     showView(viewKicked);
-
-    // Disconnect socket
     socket.disconnect();
   });
 
@@ -225,6 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (state.player) {
       guestHeaderScore.textContent = state.player.score || 0;
+      if (state.player.avatar) {
+        currentAvatar = state.player.avatar;
+        updateAvatarPreview();
+      }
     }
 
     switch (state.status) {
@@ -235,8 +358,43 @@ document.addEventListener('DOMContentLoaded', () => {
         showView(viewLobby);
         break;
 
+      case 'READING':
+        // PHASE 1: Reading question (Question + Image visible, choices disabled/hidden, timer paused)
+        guestGameStatus.textContent = 'Lecture';
+        guestGameStatus.className = 'badge badge-info';
+
+        questionBadgeNum.textContent = `Question ${state.currentQuestionIndex + 1}/${state.totalQuestions}`;
+        guestTimerText.textContent = '--';
+
+        if (state.question) {
+          guestQuestionPrompt.textContent = state.question.prompt || 'Question';
+          
+          if (state.question.image) {
+            guestQuestionImage.src = state.question.image;
+            guestImageContainer.classList.remove('hidden');
+          } else {
+            guestImageContainer.classList.add('hidden');
+          }
+
+          if (state.question.isMultiple) {
+            multipleBadge.classList.remove('hidden');
+            multipleBadge.textContent = 'Plusieurs choix';
+          } else {
+            multipleBadge.classList.add('hidden');
+          }
+        }
+
+        guestReadingBanner.classList.remove('hidden');
+        guestChoicesContainer.innerHTML = '';
+        selectionStatusBox.innerHTML = '👀 Prenez connaissance de la question... Le vote va démarrer !';
+        selectionStatusBox.style.borderColor = 'var(--border-glass)';
+
+        showView(viewQuestion);
+        break;
+
       case 'QUESTION':
-        guestGameStatus.textContent = 'En direct';
+        // PHASE 2: Voting active (Question + Choices active + Countdown)
+        guestGameStatus.textContent = 'Vote en cours';
         guestGameStatus.className = 'badge badge-warning';
 
         questionBadgeNum.textContent = `Question ${state.currentQuestionIndex + 1}/${state.totalQuestions}`;
@@ -247,6 +405,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (state.question) {
+          guestQuestionPrompt.textContent = state.question.prompt || 'Question';
+
+          if (state.question.image) {
+            guestQuestionImage.src = state.question.image;
+            guestImageContainer.classList.remove('hidden');
+          } else {
+            guestImageContainer.classList.add('hidden');
+          }
+
           if (state.question.isMultiple) {
             multipleBadge.classList.remove('hidden');
             multipleBadge.textContent = 'Plusieurs choix';
@@ -254,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
             multipleBadge.classList.add('hidden');
           }
 
-          // Render Choice Buttons (Text & Colors only, NO symbols)
+          guestReadingBanner.classList.add('hidden');
           renderChoiceButtons(state.question.choices, state.question.isMultiple);
           updateStatusIndicator(state.question.isMultiple);
         }

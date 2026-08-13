@@ -1,4 +1,4 @@
-// Admin Control Room Client Logic (Moderation / Kick, Timers, Reveal Workflow)
+// Admin Control Room Client Logic (2-Phase Workflow, Avatars, Strict Podium Progression)
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Buttons
   const btnStartGame = document.getElementById('btn-start-game');
+  const btnStartVoting = document.getElementById('btn-start-voting');
   const btnRevealAnswer = document.getElementById('btn-reveal-answer');
   const btnShowLeaderboard = document.getElementById('btn-show-leaderboard');
   const btnNextQuestion = document.getElementById('btn-next-question');
@@ -60,11 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   socket.on('timer_tick', ({ timeRemaining }) => {
-    adminTimerText.textContent = `${timeRemaining}s`;
-    if (timeRemaining <= 5) {
-      adminTimerText.style.color = '#EF4444';
-    } else {
-      adminTimerText.style.color = '#F59E0B';
+    if (currentState && currentState.status === 'QUESTION') {
+      adminTimerText.textContent = `${timeRemaining}s`;
+      if (timeRemaining <= 5) {
+        adminTimerText.style.color = '#EF4444';
+      } else {
+        adminTimerText.style.color = '#F59E0B';
+      }
     }
   });
 
@@ -90,6 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Action Button Handlers
   btnStartGame.addEventListener('click', () => {
     socket.emit('admin_start_game');
+  });
+
+  btnStartVoting.addEventListener('click', () => {
+    socket.emit('admin_start_voting');
   });
 
   btnRevealAnswer.addEventListener('click', () => {
@@ -157,10 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnTogglePause.textContent = isPaused ? '▶️ Reprendre' : '⏸️ Pause';
 
     updateGauge(state.answeredCount || 0, state.connectedCount || 0);
-    adminTimerText.textContent = `${state.timeRemaining || 0}s`;
 
-    // Manage Action Toolbar Visibility based on status
+    // Manage Action Toolbar Visibility (Strict Workflow)
     btnStartGame.classList.add('hidden');
+    btnStartVoting.classList.add('hidden');
     btnRevealAnswer.classList.add('hidden');
     btnShowLeaderboard.classList.add('hidden');
     btnNextQuestion.classList.add('hidden');
@@ -168,15 +175,33 @@ document.addEventListener('DOMContentLoaded', () => {
     switch (state.status) {
       case 'LOBBY':
         adminStatusBadge.className = 'badge badge-info';
+        adminTimerText.textContent = '--';
         adminQuestionEmpty.classList.remove('hidden');
         adminQuestionActive.classList.add('hidden');
         btnStartGame.classList.remove('hidden');
         break;
 
-      case 'QUESTION':
-        adminStatusBadge.className = 'badge badge-warning';
+      case 'READING':
+        // Phase 1: Question is shown, timer is paused, host reads question
+        adminStatusBadge.className = 'badge badge-info';
+        adminStatusBadge.textContent = 'LECTURE';
+        adminTimerText.textContent = 'Pause';
         adminQuestionEmpty.classList.add('hidden');
         adminQuestionActive.classList.remove('hidden');
+        
+        btnStartVoting.classList.remove('hidden');
+        btnStartVoting.textContent = '🎯 Lancer les réponses';
+        renderQuestionData(state);
+        break;
+
+      case 'QUESTION':
+        // Phase 2: Voting is active and timer is running
+        adminStatusBadge.className = 'badge badge-warning';
+        adminStatusBadge.textContent = 'VOTE EN COURS';
+        adminTimerText.textContent = `${state.timeRemaining || 0}s`;
+        adminQuestionEmpty.classList.add('hidden');
+        adminQuestionActive.classList.remove('hidden');
+        
         btnRevealAnswer.classList.remove('hidden');
         btnRevealAnswer.textContent = '👁️ Afficher la réponse';
         renderQuestionData(state);
@@ -184,21 +209,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
       case 'REVEAL':
         adminStatusBadge.className = 'badge badge-success';
+        adminStatusBadge.textContent = 'RÉPONSE RÉVÉLÉE';
+        adminTimerText.textContent = '0s';
         adminQuestionEmpty.classList.add('hidden');
         adminQuestionActive.classList.remove('hidden');
+
+        // STRICT FLOW: Only "Afficher le classement" (or "Afficher le Podium Final") is allowed!
         btnShowLeaderboard.classList.remove('hidden');
-        btnNextQuestion.classList.remove('hidden');
+        if (state.isLastQuestion) {
+          btnShowLeaderboard.textContent = '🏆 Afficher le Podium Final';
+        } else {
+          btnShowLeaderboard.textContent = '🏆 Afficher le classement';
+        }
         renderQuestionData(state);
         break;
 
       case 'LEADERBOARD':
         adminStatusBadge.className = 'badge badge-info';
+        adminStatusBadge.textContent = 'CLASSEMENT';
+        adminTimerText.textContent = '--';
         btnNextQuestion.classList.remove('hidden');
+        btnNextQuestion.textContent = '➡️ Question suivante';
         break;
 
       case 'GAME_OVER':
         adminStatusBadge.className = 'badge badge-success';
-        adminStatusBadge.textContent = 'TERMINÉ';
+        adminStatusBadge.textContent = 'PODIUM FINAL / TERMINÉ';
+        adminTimerText.textContent = 'Fin';
         break;
     }
 
@@ -239,10 +276,15 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `<span style="font-size: 0.75rem; color: #34D399; font-weight: 700;">✅ Voté</span>`
         : `<span style="font-size: 0.75rem; color: var(--text-muted);">⏳ En attente</span>`;
 
+      const avatarSvg = window.QuizoAvatar ? window.QuizoAvatar.renderSvg(p.avatar, 28) : '';
+
       return `
         <div class="player-admin-row">
           <div class="flex-row items-center gap-2" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             <span title="${p.isConnected ? 'En ligne' : 'Déconnecté'}">${connIcon}</span>
+            <div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">
+              ${avatarSvg}
+            </div>
             <strong style="color: #FFF; font-size: 0.95rem;">${escapeHtml(p.name)}</strong>
             <span style="color: var(--text-secondary); font-size: 0.8rem;">(${p.score || 0} pts)</span>
           </div>
